@@ -41,7 +41,7 @@ class Family(StrEnum):
 
 
 class Status(StrEnum):
-    """Generic lifecycle. FORK: extend per family/entity as your domain needs."""
+    """Generic lifecycle, plus the WelcomeHome prospect pipeline stages."""
 
     draft = "draft"
     published = "published"
@@ -49,16 +49,19 @@ class Status(StrEnum):
     open = "open"  # task queue
     done = "done"  # task queue
 
+    # Prospect lead stages (mirrors WelcomeHome CRM), in pipeline order.
+    inquiry = "inquiry"
+    attempted = "attempted"
+    contact_made = "contact_made"  # WelcomeHome: "Ct Made"
+    visit_scheduled = "visit_scheduled"  # WelcomeHome: "Visit Schld"
+    visit_completed = "visit_completed"  # WelcomeHome: "Visit Cmplt"
+    soc = "soc"  # Start of Care — prospect becomes an active client
+
 
 class Kind(StrEnum):
-    """Entity kinds — FORK SEAM (§7 step 1).
+    """Entity kinds tracked by this fork."""
 
-    What does this business track? Replace the placeholder with your real kinds, e.g.
-    patients/providers/claims, deals/accounts/contacts, students/courses/cohorts. Each
-    value should get a corresponding model in the entity discriminated union below.
-    """
-
-    thing = "thing"  # placeholder — replace with your domain's entity kinds
+    prospect = "prospect"  # a WelcomeHome lead, from first inquiry through Start of Care
 
 
 class CoreNote(BaseModel):
@@ -78,12 +81,26 @@ class CoreNote(BaseModel):
     source_ref: str | None = None  # stable external id ("<system>:<type>:<id>") for sync
 
 
+class ReferenceCategory(StrEnum):
+    """Reference taxonomy for this fork."""
+
+    intake_script = "intake_script"  # how to talk to a new inquiry at each lead stage
+    pricing = "pricing"  # rate sheets, hourly rates by service line, minimums, packages
+    service_sop = "service_sop"  # what each service line actually includes
+    policy_voice = "policy_voice"  # general policy, brand voice/tone, FAQs
+
+
+class Audience(StrEnum):
+    internal = "internal"  # staff-only: scripts, pricing, SOPs
+    client_facing = "client_facing"  # safe to share directly with prospects/families
+
+
 class ReferenceNote(CoreNote):
     """Authored, slow-changing knowledge: SOPs, policy, pricing, voice (§3.1)."""
 
     family: Literal[Family.reference] = Family.reference
-    category: str | None = None  # FORK: your reference taxonomy
-    audience: str | None = None
+    category: ReferenceCategory | None = None
+    audience: Audience = Audience.internal
 
 
 class EntityNote(CoreNote):
@@ -92,6 +109,50 @@ class EntityNote(CoreNote):
     family: Literal[Family.entity] = Family.entity
     kind: Kind  # <-- YOUR entity kinds live here
     # FORK: add filterable frontmatter fields (stage, owner, area, dates, ...).
+
+
+class ServiceLine(StrEnum):
+    """What the prospect is being served for — WelcomeHome's service-line taxonomy."""
+
+    unknown = "Unknown"
+    companion_care = "Companion Care"
+    personal_care = "Personal Care"
+    respite_care = "Respite Care"
+    specialized_care = "Specialized Care"
+    va_prospect = "VA Prospect"
+
+
+class FamilyContact(BaseModel):
+    """One family member/decision-maker tied to a prospect. A prospect can have several."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    name: str
+    phone: str | None = None
+    email: str | None = None
+
+
+class ProspectNote(EntityNote):
+    """A WelcomeHome lead, from first inquiry through Start of Care.
+
+    Identity: no stable WelcomeHome record ID is wired up yet, so dedup is on name plus
+    phone/email (see `source_ref` on `CoreNote`) until the WelcomeHome connector lands.
+
+    Medical/PHI detail (diagnoses, medications, detailed records) stays in WellSky — never
+    in this note. `service_lines` and the body may carry a brief, non-sensitive care-need
+    summary only (e.g. "has mobility needs"), per the data boundary in `vault/context/ORG.md`.
+    """
+
+    kind: Literal[Kind.prospect] = Kind.prospect
+    status: Status = Status.inquiry  # current WelcomeHome lead stage
+    referral_source: str | None = None  # aggregator, e.g. "A Place for Mom", "Care.com"
+    service_lines: list[ServiceLine] = [ServiceLine.unknown]
+    phone: str | None = None
+    email: str | None = None
+    family_contacts: list[FamilyContact] = []  # decision-makers, if different from prospect
+    inquiry_date: date | None = None
+    last_contact_date: date | None = None
+    next_follow_up: date | None = None  # drives "respond within the hour" urgency
 
 
 class EventNote(CoreNote):
@@ -114,8 +175,8 @@ class TaskNote(CoreNote):
 
 
 # Entities are a discriminated union on `kind` (one member per Kind). With a single
-# placeholder kind this is just EntityNote; add members as you fork.
-EntityUnion = EntityNote
+# kind this is just ProspectNote; add members as more Kinds are tracked.
+EntityUnion = ProspectNote
 
 # Top-level: a discriminated union on `family`.
 AnyNote = Annotated[

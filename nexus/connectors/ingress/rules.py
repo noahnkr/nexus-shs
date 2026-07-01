@@ -21,10 +21,16 @@ AUTONOMOUS = "autonomous"
 
 # FORK: one row per (source, kind) you care about.
 RULES: dict[tuple[str, str], str] = {
-    ("example", "new_record"): SUPERVISED,  # external-facing -> human approval
-    ("example", "record_changed"): LOG_FLAG,  # vault-only state update + flag
     ("cron", "daily-digest"): AUTONOMOUS,  # owner-only notification
     ("cron", "vault-health"): AUTONOMOUS,
+    # WelcomeHome poll-sync (docs/connectors/welcomehome.md) — vault-only, no outbound
+    # write to WelcomeHome, so nothing here needs SUPERVISED.
+    ("welcomehome", "new_prospect"): LOG_FLAG,  # new prospect entity created + flagged
+    ("welcomehome", "stage_changed"): LOG_FLAG,  # prospect stage advanced
+    ("welcomehome", "prospect_stale"): LOG_FLAG,  # no contact/movement within window
+    # GoTo Connect (docs/connectors/goto-connect.md)
+    ("goto_connect", "missed_call"): LOG_FLAG,  # vault-only log + flag, no outbound action
+    ("goto_connect", "sms_received"): SUPERVISED,  # any reply is external-facing -> draft
 }
 
 

@@ -1,30 +1,28 @@
-# Nexus
+# Nexus — Seniors Helping Seniors, Greater Naperville
 
-**A forkable foundation for building a *system of intelligence* over any business.**
+**The operating intelligence for Seniors Helping Seniors — Greater Naperville**, a home
+care franchise serving seniors and their families with companion, personal, and
+specialized care.
 
-Nexus is a layer that sits **above** your systems of record (CRM, phone, email, calendar)
-and synthesizes them into one queryable, self-maintaining context — with agents that
-notify, log, queue, and act on top. You clone it, teach it your domain's vocabulary and
-your data sources, and you have an operational AI system rather than a chatbot.
+This fork keeps a persistent, queryable vault of the sales pipeline — leads from
+aggregators (A Place for Mom, Care.com, etc.) through WelcomeHome CRM's stages (Inquiry →
+Attempted → Ct Made → Visit Schld → Visit Cmplt → SOC) — and agents that log, flag, and
+draft on top, so nothing time-sensitive falls through the cracks. Owner: Brennen Roberts
+(brennen@shsgreaternaperville.com).
 
-This repository is the **domain-neutral core**. It is fully implemented and tested; forking
-it for a specific business is a bounded set of edits in a few well-marked files.
+It's built on **Nexus**, a forkable foundation for building a *system of intelligence*
+over any business: a layer that sits **above** your systems of record (CRM, phone, email,
+calendar) and synthesizes them into one queryable, self-maintaining context — with agents
+that notify, log, queue, and act on top.
 
-## Set it up in one command
+## Reconfiguring this fork
 
-The fastest way to make this yours is the built-in **onboarding interview**. Clone the repo,
-open it in [Claude Code](https://claude.com/claude-code), and run:
-
-```
-/onboard
-```
-
-A coding agent interviews you about yourself and your business (~20–30 min) and configures
-the fork from your answers: your persona and context files (`SOUL` / `USER` / `ORG`), your
-entity + reference **schema**, your risk policy, a **plan for each connector** you want, and
-a tailored **seeding checklist** telling you exactly what to collect next. See
-[`.claude/commands/onboard.md`](.claude/commands/onboard.md) for what it covers, or
-[Forking](#forking-nexus-for-your-business) to do it by hand.
+This fork has already been through the onboarding interview (see
+`docs/onboarding/PROFILE.md` for the raw record of decisions). If the business changes in a
+way that needs reconfiguring — new entity kinds, a new connector, a change in risk
+tolerance — open this repo in [Claude Code](https://claude.com/claude-code) and run
+`/onboard` again, or edit the seams by hand per [Forking](#forking-nexus-for-your-business)
+below.
 
 ---
 

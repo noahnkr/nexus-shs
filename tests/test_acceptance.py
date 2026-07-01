@@ -155,8 +155,8 @@ def test_hybrid_search_bm25_and_family_scope():
     from nexus.vault.schema import Family
     from nexus.vault.search import get_index
 
-    w.update_entity("Acme Corp", "thing", {"summary": "key enterprise healthcare account"})
-    w.update_entity("Beta LLC", "thing", {"summary": "small retail customer"})
+    w.update_entity("Acme Corp", "prospect", {"summary": "key enterprise healthcare account"})
+    w.update_entity("Beta LLC", "prospect", {"summary": "small retail customer"})
     w.append_log("renewed the Acme enterprise contract")
 
     idx = get_index()
@@ -178,7 +178,7 @@ def test_writes_and_event_log():
     note, _ = io.read_note(p)
     assert len(note.entries) == 2  # append-only: both on today's note
 
-    ep = w.update_entity("Acme Corp", "thing", {"summary": "key account", "status": "published"})
+    ep = w.update_entity("Acme Corp", "prospect", {"summary": "key account", "status": "published"})
     assert io.read_note(ep)[0].summary == "key account"
 
     tp = w.create_task("call back", channel="phone", recipient="555", body="ring them")
@@ -198,14 +198,14 @@ def test_queries_and_metadata_filter_skips_embedder(monkeypatch):
 
     monkeypatch.setattr(embeddings, "embed", _boom)
 
-    w.update_entity("Acme Corp", "thing", {"summary": "key account", "status": "published"})
-    w.update_entity("Beta LLC", "thing", {"summary": "retail"})
+    w.update_entity("Acme Corp", "prospect", {"summary": "key account", "status": "published"})
+    w.update_entity("Beta LLC", "prospect", {"summary": "retail"})
     w.create_task("approve refund")
 
     assert queries.get_entity("acme corp")["summary"] == "key account"
     assert queries.get_entity("nobody") is None
     assert [e["title"] for e in queries.list_entities(status="published")] == ["Acme Corp"]
-    assert len(queries.list_entities(kind="thing")) == 2
+    assert len(queries.list_entities(kind="prospect")) == 2
     assert [t["action"] for t in queries.list_open_tasks()] == ["approve refund"]
 
 
@@ -220,7 +220,7 @@ def test_index_empty_queue_signal_and_leaf_table():
     tasks_idx = index.regenerate(io.vault_root() / "tasks")
     assert index.NO_OPEN_TASKS in tasks_idx.read_text(encoding="utf-8")
 
-    w.update_entity("Acme Corp", "thing", {"summary": "key account"})
+    w.update_entity("Acme Corp", "prospect", {"summary": "key account"})
     ent_idx = index.regenerate(io.vault_root() / "entity")
     body = ent_idx.read_text(encoding="utf-8")
     assert "| Title |" in body and "Acme Corp" in body
@@ -259,7 +259,7 @@ def test_context_loads_and_is_excluded_from_corpus():
     assert "terse and precise" in load_context()
 
     # ...but context/ is NOT part of the searchable/indexable corpus.
-    w.update_entity("Acme Corp", "thing", {"summary": "terse account"})
+    w.update_entity("Acme Corp", "prospect", {"summary": "terse account"})
     paths = {p for p, _n, _b in io.iter_notes()}
     assert not any("context" in p.parts for p in paths)
     assert all(h.family != "context" for h in get_index().query("terse"))
@@ -269,14 +269,14 @@ def test_reference_subfolder_is_walked_and_searchable():
     from datetime import date
 
     from nexus.vault import io
-    from nexus.vault.schema import Family, ReferenceNote, Status
+    from nexus.vault.schema import Family, ReferenceCategory, ReferenceNote, Status
     from nexus.vault.search import get_index
 
     note = ReferenceNote(
         title="PTO Policy", status=Status.published, summary="paid time off rules",
-        category="hr", created=date.today(), updated=date.today(),
+        category=ReferenceCategory.policy_voice, created=date.today(), updated=date.today(),
     )
-    path = io.family_dir(Family.reference) / "hr" / "pto-policy.md"
+    path = io.family_dir(Family.reference) / "policy" / "pto-policy.md"
     io.write_note(note, path, "Employees accrue PTO monthly.")
 
     titles = [n.title for _p, n, _b in io.iter_notes()]
