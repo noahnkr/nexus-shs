@@ -1,0 +1,19 @@
+.venv/
+__pycache__/
+*.pyc
+.env
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+
+# Windows/Cygwin crash dumps (e.g. from the Git Bash shim)
+*.stackdump
+
+# Vault runtime state lives on the volume, not in git (see docs/DEPLOYMENT.md). The seed
+# structure — folder skeleton, generated INDEX.md, authored reference/ and context/ — is
+# tracked; machine-written state and archived attachments are not.
+vault/events/*.md
+vault/tasks/*.md
+vault/entity/*.md
+vault/system/
+!vault/**/.gitkeep

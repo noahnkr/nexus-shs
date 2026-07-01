@@ -1,0 +1,6 @@
+# Normalize line endings: LF in the repo everywhere. This matters most for
+# docker-entrypoint.sh — CRLF would break it inside the Linux container.
+* text=auto eol=lf
+
+# Explicitly LF for shell scripts regardless of platform.
+*.sh text eol=lf
