@@ -112,7 +112,7 @@ The agent-loop test is `skipif` without `ANTHROPIC_API_KEY`; everything else run
 | `nexus/connectors/ingress/envelope.py` | `Stimulus` |
 | `nexus/connectors/ingress/security.py` | `verify_hmac_sha256` · `within_window` · `SeenCache` |
 | `nexus/connectors/ingress/rules.py` | ⚙ `(source,kind) → tier` table + `classify` |
-| `nexus/connectors/ingress/router.py` | `dispatch` → worker (cron→scheduled, else→reactive) |
+| `nexus/connectors/ingress/router.py` | `dispatch` → worker (cron→scheduled, else→reactive), then workflow trigger matching |
 | `nexus/connectors/ingress/routes.py` | `/webhooks/{source}` (verify→parse→dedup→log→ACK→bg dispatch), `/cron/{job}`; `CONNECTORS` map |
 | `nexus/connectors/ingress/jobs.py` | `DETERMINISTIC_JOBS` vs `AGENT_JOBS` cron split |
 | `nexus/connectors/example/` | ⚙ sample connector: `webhook.py` · `client.py` · `sync.py` |
@@ -122,9 +122,19 @@ The agent-loop test is `skipif` without `ANTHROPIC_API_KEY`; everything else run
 | `nexus/agents/toolset.py` | ⚙ loop tool registry + `anthropic_tool_specs` |
 | `nexus/agents/reactive.py` / `scheduled.py` | thin `run_loop` wrappers (lean/job-name prompts, model tiers) |
 | `nexus/agents/notify.py` | owner notification (swappable transport; logs by default) |
-| `nexus/tools/__init__.py` | `register_all` + `build_mcp` (MCP surface = same plain functions, plus MCP-only KB curation: `ingest_file` · `ingest_batch` · `set_note_status`) |
+| `nexus/tools/__init__.py` | `register_all` + `build_mcp` (MCP surface = same plain functions, plus MCP-only KB curation: `ingest_file` · `ingest_batch` · `set_note_status`; plus workflow build/manage tools) |
+| `nexus/workflows/schema.py` | `WorkflowSpec` (definition) / `RunState` (instance); `validate_graph` |
+| `nexus/workflows/blocks.py` | ⚙ block registry (trigger/condition/action); refuses `external_send`; connector `blocks()` seam |
+| `nexus/workflows/store.py` | validated JSON persistence under `vault/system/workflows/` (+ `runs/`) |
+| `nexus/workflows/render.py` | `WorkflowSpec` → Mermaid flowchart preview |
+| `nexus/workflows/builder.py` | NL → spec: schema-constrained compile with deterministic validate-and-retry |
+| `nexus/workflows/engine.py` | run execution; per-step persistence; multi-instance runs; `cancel_run` |
+| `nexus/workflows/triggers.py` | active-workflow trigger matching, fired from `dispatch` |
 
 ⚙ = a **fork seam** you're expected to edit.
+
+See [`docs/WORKFLOWS.md`](docs/WORKFLOWS.md) for the workflows layer (conversational
+Zapier-shaped automation: build in prose, preview as Mermaid, manage statuses and runs).
 
 ## Mechanisms worth internalizing
 

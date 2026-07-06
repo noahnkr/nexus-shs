@@ -30,7 +30,15 @@ def _workers() -> dict[str, Worker]:
 
 
 async def dispatch(stimulus: Stimulus, tier: str) -> None:
-    """Route to the right worker and run its loop. Called as a background task post-ACK."""
+    """Route to the right worker and run its loop. Called as a background task post-ACK.
+
+    After the worker, any ACTIVE workflows whose trigger matches this stimulus fire a run
+    each (workflows layer). fire_matching never raises — workflows can't break dispatch.
+    """
     workers = _workers()
     worker = workers.get(stimulus.source, workers["__default__"])
     await worker(stimulus, tier)
+
+    from nexus.workflows.triggers import fire_matching
+
+    await fire_matching(stimulus, tier)
