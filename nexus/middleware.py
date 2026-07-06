@@ -10,6 +10,7 @@ extra task/anyio overhead BaseHTTPMiddleware imposes. Two concerns:
 
 from __future__ import annotations
 
+import hmac
 import logging
 import time
 from collections.abc import Awaitable, Callable
@@ -49,6 +50,41 @@ class LoggingMiddleware:
         )
 
 
+class McpAuthMiddleware:
+    """Bearer-guard the `/mcp` control plane (spec §5.3, §8 the MCP seam).
+
+    The MCP mount exposes read + vault-write tools; it is the privileged surface. This is
+    the bearer check the connectors reference as "the MCP bearer auth" they deliberately
+    bypass (each webhook/cron route self-authenticates instead). Only `/mcp` is guarded —
+    `/health`, `/webhooks/*`, `/cron/*` pass straight through.
+
+    Constant-time compare against `settings.mcp_token`. A missing/wrong token gets a 401
+    with `WWW-Authenticate: Bearer` so clients know how to present credentials.
+    """
+
+    def __init__(self, app: ASGIApp) -> None:
+        self.app = app
+
+    async def __call__(self, scope, receive, send) -> None:
+        if scope["type"] != "http" or not scope.get("path", "").startswith("/mcp"):
+            await self.app(scope, receive, send)
+            return
+
+        from nexus.config import settings
+
+        provided = ""
+        for name, value in scope.get("headers", []):
+            if name == b"authorization":
+                provided = value.decode("latin-1").removeprefix("Bearer ").strip()
+                break
+
+        if not hmac.compare_digest(provided, settings.mcp_token):
+            await _send_401(send)
+            return
+
+        await self.app(scope, receive, send)
+
+
 class BodyCapMiddleware:
     """Reject requests whose body exceeds `max_bytes` with a 413."""
 
@@ -84,3 +120,17 @@ async def _send_413(send) -> None:
         }
     )
     await send({"type": "http.response.body", "body": b"payload too large"})
+
+
+async def _send_401(send) -> None:
+    await send(
+        {
+            "type": "http.response.start",
+            "status": 401,
+            "headers": [
+                (b"content-type", b"text/plain"),
+                (b"www-authenticate", b"Bearer"),
+            ],
+        }
+    )
+    await send({"type": "http.response.body", "body": b"unauthorized"})
