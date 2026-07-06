@@ -9,7 +9,10 @@ state.*
 Ingest with `ingest_file(path, overrides={"category": ..., "audience": ...}, subfolder=...)`
 or `ingest_batch([...], overrides=...)` for a folder — `overrides` pins frontmatter you
 already know over the classifier's guess. Drafts land as `status: draft`; a human promotes
-to `published` after review.
+to `published` after review — via chat (the `set_note_status` MCP tool; `list_reference`
+with `status="draft"` shows what's pending) or by editing the frontmatter. Both ingest
+functions are also MCP tools, so seeding can happen entirely from a chat client pointing
+at server-local files.
 
 - [ ] **Intake / sales scripts** (`category=intake_script`) — how to talk to a new inquiry
       at each WelcomeHome stage: qualifying questions, objection handling, what to say when

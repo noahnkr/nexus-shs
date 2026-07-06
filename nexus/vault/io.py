@@ -56,6 +56,29 @@ def slugify(text: str) -> str:
     return slug or "untitled"
 
 
+def resolve_note_path(path: str | Path) -> Path | None:
+    """Resolve a caller-supplied path to a real note file inside the vault, or None.
+
+    Accepts paths as emitted by the vault walk (relative to CWD when vault_path is
+    relative), absolute paths, and vault-root-relative paths. INDEX.md, anything in
+    NON_NOTE_DIRS, and paths escaping the vault all resolve to None — this is the
+    boundary check for every tool that takes a note path from the model.
+    """
+    root = vault_root().resolve()
+    given = Path(path)
+    candidates = [given] if given.is_absolute() else [given, root / given]
+    target = next((c.resolve() for c in candidates if c.is_file()), None)
+    if target is None or target.name == INDEX_FILENAME:
+        return None
+    try:
+        rel = target.relative_to(root)
+    except ValueError:
+        return None  # escapes the vault
+    if rel.parts and rel.parts[0] in NON_NOTE_DIRS:
+        return None  # attachments/context are not queryable notes
+    return target
+
+
 def parse_note(path: Path) -> CoreNote:
     """Load a note, re-validating its frontmatter against the schema (§3.2 #3)."""
     note, _ = read_note(path)

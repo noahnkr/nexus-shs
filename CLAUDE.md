@@ -101,13 +101,13 @@ The agent-loop test is `skipif` without `ANTHROPIC_API_KEY`; everything else run
 | `nexus/app.py` | build the ASGI app: `/health`, ingress routes, mounted `/mcp` (+ lifespan) |
 | `nexus/config.py` | `Settings` (env); `is_prod` fail-fast; `semantic_enabled` |
 | `nexus/middleware.py` | pure-ASGI logging + body cap |
-| `nexus/writes.py` | `append_log` · `update_entity` · `create_task` · `append_memory` (all gated; **no send**) |
+| `nexus/writes.py` | `append_log` · `update_entity` · `create_task` · `append_memory` · `set_note_status` (all gated; **no send**) |
 | `nexus/vault/schema.py` | ⚙ families, `Kind`, `Status`, models, `json_schema_for`, `template_for` |
 | `nexus/vault/io.py` | `write_note` gate; `read_note`/`iter_notes`/`family_dir`/`slugify`; `NON_NOTE_DIRS` |
 | `nexus/vault/index.py` | leaf/branch/calendar `INDEX.md` renderers; `regenerate_all` |
 | `nexus/vault/search.py` | `HybridIndex` (BM25 ⊕ dense), `rrf_merge`, `get_index`, `reindex` |
 | `nexus/vault/embeddings.py` | `embed()` — Voyage; returns `None` (dormant) without a key |
-| `nexus/vault/queries.py` | reads: `search_reference` · `get_entity` · `list_entities` · `search_logs` · `list_open_tasks` |
+| `nexus/vault/queries.py` | reads: `search_reference` · `get_note` · `get_entity` · `list_entities` · `list_reference` · `search_logs` · `list_open_tasks` |
 | `nexus/vault/events.py` | append-only day-note mechanics |
 | `nexus/connectors/ingress/envelope.py` | `Stimulus` |
 | `nexus/connectors/ingress/security.py` | `verify_hmac_sha256` · `within_window` · `SeenCache` |
@@ -122,7 +122,7 @@ The agent-loop test is `skipif` without `ANTHROPIC_API_KEY`; everything else run
 | `nexus/agents/toolset.py` | ⚙ loop tool registry + `anthropic_tool_specs` |
 | `nexus/agents/reactive.py` / `scheduled.py` | thin `run_loop` wrappers (lean/job-name prompts, model tiers) |
 | `nexus/agents/notify.py` | owner notification (swappable transport; logs by default) |
-| `nexus/tools/__init__.py` | `register_all` + `build_mcp` (MCP surface = same plain functions) |
+| `nexus/tools/__init__.py` | `register_all` + `build_mcp` (MCP surface = same plain functions, plus MCP-only KB curation: `ingest_file` · `ingest_batch` · `set_note_status`) |
 
 ⚙ = a **fork seam** you're expected to edit.
 

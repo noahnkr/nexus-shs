@@ -99,6 +99,39 @@ def create_task(
     return io.write_note(note, path, body or "")
 
 
+def set_note_status(path: str, status: str) -> Path:
+    """Move a knowledge-base note through its lifecycle: draft -> published -> archived.
+
+    This is the explicit review decision the ingest contract promises (§3.7): ingest lands
+    `status: draft`; a HUMAN promotes to `published` (or retires to `archived`) after
+    reading it. Reference family only — tasks and entities have their own lifecycles
+    (`create_task` / `update_entity`). Exposed on the MCP surface (the owner's chat), NOT
+    in the loop's toolset: the ambient agents must not publish what ingest drafted.
+    """
+    new_status = Status(status)
+    if new_status not in {Status.draft, Status.published, Status.archived}:
+        raise ValueError(f"'{status}' is not a reference lifecycle status")
+    target = io.resolve_note_path(path)
+    if target is None:
+        raise FileNotFoundError(f"no vault note at '{path}'")
+    note, body = io.read_note(target)
+    if note.family != Family.reference:
+        raise ValueError(f"set_note_status is for reference notes only, not '{note.family}'")
+    note.status = new_status
+    note.updated = datetime.now(UTC).date()
+    result = io.write_note(note, target, body)
+    _refresh_indexes()  # no loop wraps this write, so refresh search + INDEX.md here
+    return result
+
+
+def _refresh_indexes() -> None:
+    from nexus.vault.index import regenerate_all
+    from nexus.vault.search import reindex
+
+    reindex()
+    regenerate_all()
+
+
 def append_memory(fact: str) -> Path:
     """A durable cross-cutting fact was learned. Vault-only, autonomous.
 
