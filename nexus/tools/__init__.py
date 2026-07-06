@@ -10,6 +10,7 @@ CRITICAL: register read + vault-write tools only. No external-send tool (§4.2).
 
 from __future__ import annotations
 
+import logging
 from dataclasses import asdict
 from pathlib import Path
 from typing import Any
@@ -19,6 +20,8 @@ from nexus.agents.toolset import _SPECS
 from nexus.ingest import batch as ingest_mod_batch
 from nexus.ingest import pipeline as ingest_mod
 from nexus.vault import queries
+
+logger = logging.getLogger("nexus.mcp")
 
 
 def _hits(items) -> list[dict]:
@@ -142,9 +145,29 @@ def register_all(target: Any) -> None:
 
 
 def build_mcp(name: str = "nexus"):
-    """Construct a FastMCP server with all vault tools registered."""
-    from fastmcp import FastMCP
+    """Construct a FastMCP server with all vault tools registered.
 
-    mcp = FastMCP(name, instructions="Nexus vault tools — read context and record change.")
+    The /mcp control plane is bearer-guarded with FastMCP's native StaticTokenVerifier
+    (spec §5.3) — the privileged surface exposing read + vault-write tools. A request must
+    present `Authorization: Bearer <MCP_TOKEN>`; FastMCP rejects the rest with a
+    spec-compliant 401 + resource-metadata. Only when the token is unset (dev) does /mcp
+    run open, and we log that loudly.
+    """
+    from fastmcp import FastMCP
+    from fastmcp.server.auth.providers.jwt import StaticTokenVerifier
+
+    from nexus.config import settings
+
+    auth = None
+    if settings.mcp_token:
+        auth = StaticTokenVerifier(
+            tokens={settings.mcp_token: {"sub": "owner", "client_id": "claude-desktop"}}
+        )
+    else:
+        logger.warning("MCP_TOKEN unset — /mcp is UNAUTHENTICATED (dev only).")
+
+    mcp = FastMCP(
+        name, instructions="Nexus vault tools — read context and record change.", auth=auth
+    )
     register_all(mcp)
     return mcp

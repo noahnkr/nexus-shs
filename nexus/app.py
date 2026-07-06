@@ -17,7 +17,7 @@ from starlette.responses import JSONResponse
 from starlette.routing import Route
 
 from nexus.config import settings
-from nexus.middleware import BodyCapMiddleware, LoggingMiddleware, McpAuthMiddleware
+from nexus.middleware import BodyCapMiddleware, LoggingMiddleware
 
 
 async def health(_: Request) -> JSONResponse:
@@ -49,14 +49,9 @@ def build_app() -> Starlette:
         pass
 
     # Pure-ASGI middleware, outermost first (§9). Starlette builds the stack so there is
-    # no self-referential wrapping (which would recurse infinitely). McpAuthMiddleware
-    # bearer-guards only the /mcp mount; it runs after logging (so 401s are logged) and
-    # lets /health, /webhooks/*, and /cron/* through to their own auth.
-    middleware = [
-        Middleware(LoggingMiddleware),
-        Middleware(BodyCapMiddleware),
-        Middleware(McpAuthMiddleware),
-    ]
+    # no self-referential wrapping (which would recurse infinitely). The /mcp bearer guard
+    # lives inside the FastMCP app (StaticTokenVerifier, see tools.build_mcp), not here.
+    middleware = [Middleware(LoggingMiddleware), Middleware(BodyCapMiddleware)]
     return Starlette(routes=routes, middleware=middleware, lifespan=lifespan)
 
 
