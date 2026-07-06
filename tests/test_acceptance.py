@@ -243,6 +243,70 @@ def test_ingest_extract_and_assemble(tmp_path):
     assert note.status == Status.draft and note.source_ref == "file:reference:policy.txt"
 
 
+def test_ingest_preserves_extracted_body_for_binary_formats(tmp_path, monkeypatch):
+    """Binary/HTML sources must land with the EXTRACTED TEXT as the note body — a
+    bodiless note is invisible to search and can never be quoted in an answer."""
+    from nexus.ingest import pipeline
+    from nexus.vault import io
+    from nexus.vault.search import get_index
+
+    src = tmp_path / "rates.html"
+    src.write_text("<html><body>Companion Care is $32 per hour.</body></html>", encoding="utf-8")
+    monkeypatch.setattr(
+        pipeline, "classify",
+        lambda text, hint_family: {"title": "Rate Sheet", "summary": "hourly rates"},
+    )
+    path = pipeline.ingest_file(src, overrides={"category": "pricing"})
+
+    note, body = io.read_note(path)
+    assert "$32 per hour" in body  # extracted text survives as the searchable body
+    assert note.category == "pricing"  # curator override beat the classifier
+    assert (io.vault_root() / "system" / "attachments" / "rates.html").exists()
+    assert any(h.title == "Rate Sheet" for h in get_index().query("companion care hourly rate"))
+
+
+def test_get_note_drills_into_a_search_hit():
+    from nexus.vault import queries
+    from nexus.vault.io import family_dir, write_note
+    from nexus.vault.schema import Family, ReferenceNote, Status
+
+    note = ReferenceNote(
+        title="FAQ", status=Status.published, summary="common questions",
+        created=date.today(), updated=date.today(), source_ref="file:reference:faq.pdf",
+    )
+    path = write_note(note, family_dir(Family.reference) / "faq.md", "We serve Naperville.")
+
+    rec = queries.get_note(str(path))
+    assert rec and "We serve Naperville." in rec["_body"]
+    assert rec["source_ref"] == "file:reference:faq.pdf"  # the citable backlink
+    assert queries.get_note("../outside.md") is None  # can't escape the vault
+    assert queries.get_note("system/attachments/x.pdf") is None  # non-note dirs blocked
+
+
+def test_get_entity_resolves_phone_and_email():
+    import nexus.writes as w
+    from nexus.vault import queries
+
+    w.update_entity("Mary Smith", "prospect", {
+        "phone": "(630) 555-0142", "email": "mary@example.com",
+        "family_contacts": [{"name": "Tom Smith", "phone": "630-555-0199"}],
+    })
+    assert queries.get_entity("+16305550142")["title"] == "Mary Smith"  # caller-ID lookup
+    assert queries.get_entity("MARY@example.com")["title"] == "Mary Smith"
+    assert queries.get_entity("6305550199")["title"] == "Mary Smith"  # family contact
+    assert queries.get_entity("6305550000") is None
+
+
+def test_append_memory_is_schema_valid_and_retrievable():
+    import nexus.writes as w
+    from nexus.vault import queries
+
+    w.append_memory("Aggregator leads convert best when called within the hour.")
+    w.append_memory("Tom prefers SMS over email.")  # second append must also validate
+    hits = queries.search_reference("aggregator leads convert")
+    assert any(h.title == "Memory" for h in hits)
+
+
 # --- vault/context: always-on context injection + non-note exclusion ---------------
 
 

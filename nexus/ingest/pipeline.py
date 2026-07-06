@@ -30,21 +30,32 @@ def assemble(frontmatter: dict[str, Any], *, family: Family, source_ref: str | N
 
 
 def ingest_file(
-    source: Path, *, family: Family = Family.reference, subfolder: str | None = None
+    source: Path,
+    *,
+    family: Family = Family.reference,
+    subfolder: str | None = None,
+    overrides: dict[str, Any] | None = None,
 ) -> Path:
     """Run the full pipeline for one source file; return the draft note path (§3.7).
 
     `subfolder` optionally organizes reference notes into a human-browsable subtree
     (e.g. reference/hr/…). It is purely for curation/Obsidian navigation: retrieval walks
     all subfolders and filtering still uses frontmatter, so a subfolder is never required.
+    `overrides` pins frontmatter the curator already knows (e.g. category/audience) over
+    whatever the classifier emits — the schema still validates the result.
     Drafts are promoted to `published` by a human (or a trusted agent).
     """
     text = extract_text(source)
     frontmatter = classify(text, hint_family=family)
+    if overrides:
+        frontmatter.update(overrides)
     source_ref = f"file:{family.value}:{source.name}"
     note = assemble(frontmatter, family=family, source_ref=source_ref)
 
-    body = text if source.suffix.lower() in {".md", ".markdown", ".txt"} else ""
+    # The extracted text IS the note body for every format: search/retrieval index bodies,
+    # so a bodiless note is invisible to answers. The lossless original is archived below
+    # and cited via source_ref.
+    body = text
     dest_dir = io.family_dir(family)
     if subfolder:
         dest_dir = dest_dir / io.slugify(subfolder)

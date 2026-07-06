@@ -5,8 +5,8 @@ archives the binary original (the pipeline does this); text-only ingest treats t
 body as authoritative and archives nothing (§3.6).
 
 Text formats are handled here with no extra dependencies. Binary formats dispatch to a
-per-suffix extractor (all in-process, pure-Python — no external service): `.pdf` via pypdf,
-`.docx` via python-docx. The dispatch point is `extract_text`.
+per-suffix extractor (all in-process, pure-Python — no external service): `.pdf` via
+pdfminer.six, `.docx` via python-docx. The dispatch point is `extract_text`.
 
 Google Docs are NOT handled here: they are not a byte format but a Drive resource. Export
 them to text/markdown (or .docx) in the Drive connector's fetch step, so they arrive as
@@ -40,22 +40,41 @@ def extract_text(source: Path) -> str:
 
 
 def _extract_pdf(source: Path) -> str:
-    """Extract the embedded text layer of a digital PDF via pypdf.
+    """Extract the embedded text layer of a digital PDF via pdfminer.six.
 
-    Image-only (scanned) PDFs have no text layer and yield an empty result; we raise so a
-    human notices rather than silently drafting an empty note. OCR (Tesseract) is a separate
-    concern — add it here only if scanned docs are in scope.
+    pdfminer reconstructs words from glyph positions, which survives the design-tool PDFs
+    (Canva/Illustrator exports) whose text layers explode into per-character runs under
+    naive extraction. Image-only (scanned) PDFs have no text layer and yield an empty
+    result; we raise so a human notices rather than silently drafting an empty note. OCR
+    (Tesseract) is a separate concern — add it here only if scanned docs are in scope.
     """
-    from pypdf import PdfReader
+    from pdfminer.high_level import extract_text as pdf_extract_text
 
-    reader = PdfReader(str(source))
-    text = "\n".join(page.extract_text() or "" for page in reader.pages).strip()
+    text = (pdf_extract_text(str(source)) or "").replace("�", "").strip()
     if not text:
         raise ValueError(
             f"§3.7 — '{source.name}' yielded no extractable text (likely a scanned/image "
             "PDF). OCR is not wired in; extract text upstream or add an OCR extractor."
         )
-    return text
+    return _repair_exploded_text(text)
+
+
+def _repair_exploded_text(text: str) -> str:
+    """Collapse per-character letter spacing some PDF text layers emit.
+
+    Certain PDFs encode each glyph as its own text run, so extraction yields
+    'F r e q u e n t l y   A s k e d' — which tokenizes into single letters and makes the
+    note body useless for search. Detected by the share of single-char tokens; repaired by
+    treating runs of 2+ spaces as word breaks and removing the single spaces within words.
+    """
+    tokens = text.split()
+    if not tokens or sum(len(t) == 1 for t in tokens) / len(tokens) < 0.7:
+        return text
+    lines = []
+    for line in text.splitlines():
+        words = re.split(r" {2,}", line)
+        lines.append(" ".join(w.replace(" ", "") for w in words))
+    return "\n".join(lines)
 
 
 def _extract_docx(source: Path) -> str:

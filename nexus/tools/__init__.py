@@ -42,6 +42,10 @@ def register_all(target: Any) -> None:
     def search_reference(query: str, k: int = 8) -> list[dict]:
         return _hits(queries.search_reference(query, k))
 
+    @target.tool(name="get_note", description=d("get_note"))
+    def get_note(path: str) -> dict | None:
+        return queries.get_note(path)
+
     @target.tool(name="get_entity", description=d("get_entity"))
     def get_entity(name: str) -> dict | None:
         return queries.get_entity(name)

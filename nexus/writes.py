@@ -22,8 +22,22 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
+from pydantic import TypeAdapter
+
 from nexus.vault import io
-from nexus.vault.schema import EntityNote, Family, Kind, ReferenceNote, Status, TaskNote
+from nexus.vault.schema import (
+    EntityUnion,
+    Family,
+    Kind,
+    ReferenceCategory,
+    ReferenceNote,
+    Status,
+    TaskNote,
+)
+
+# Validate through the kind-discriminated union, NOT the base EntityNote — otherwise
+# extra="forbid" rejects every kind-specific field (phone, stage dates, ...).
+_ENTITY_ADAPTER: TypeAdapter = TypeAdapter(EntityUnion)
 
 
 def append_log(summary: str) -> Path:
@@ -52,7 +66,7 @@ def update_entity(name: str, kind: str, changes: dict[str, Any]) -> Path:
 
     data.update(changes)
     data["updated"] = today.isoformat()
-    note = EntityNote.model_validate(data)
+    note = _ENTITY_ADAPTER.validate_python(data)
     return io.write_note(note, path, body)
 
 
@@ -101,7 +115,7 @@ def append_memory(fact: str) -> Path:
             title="Memory",
             status=Status.published,
             summary="Durable cross-cutting facts learned by the agents.",
-            category="memory",
+            category=ReferenceCategory.memory,
             created=today,
             updated=today,
         )

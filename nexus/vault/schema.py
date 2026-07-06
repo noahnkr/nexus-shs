@@ -88,6 +88,7 @@ class ReferenceCategory(StrEnum):
     pricing = "pricing"  # rate sheets, hourly rates by service line, minimums, packages
     service_sop = "service_sop"  # what each service line actually includes
     policy_voice = "policy_voice"  # general policy, brand voice/tone, FAQs
+    memory = "memory"  # reserved: the agents' append_memory note (reference/memory.md)
 
 
 class Audience(StrEnum):
