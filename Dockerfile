@@ -20,10 +20,13 @@ COPY vault ./vault
 COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
 RUN chmod +x /usr/local/bin/docker-entrypoint.sh
 
-# The live vault lives on a mounted volume, NOT in the image layer.
+# The live vault lives on a mounted volume, NOT in the image layer. The volume is attached
+# by the platform at /data (Railway: Service → Volumes; Docker: `-v nexus_data:/data`). We
+# deliberately do NOT declare `VOLUME ["/data"]` here — Railway rejects the Dockerfile VOLUME
+# instruction ("docker VOLUME is not supported"), and the directive is only a hint that the
+# runtime mount does not need.
 ENV VAULT_PATH=/data/vault \
     NEXUS_ENV=prod
-VOLUME ["/data"]
 
 EXPOSE 8000
 ENTRYPOINT ["docker-entrypoint.sh"]

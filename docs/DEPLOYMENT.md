@@ -53,16 +53,25 @@ See [`.env.example`](../.env.example) for the full list. Minimum for production:
 ## Railway (recommended)
 
 Railway gives you a container + a volume + a cron trigger, which is exactly Nexus's shape.
+The repo ships a [`railway.json`](../railway.json) that pins the Dockerfile builder, the
+`/health` check, an on-failure restart policy, and a single replica — so most of the steps
+below are already configured on first deploy.
 
-1. **Create the service.** New Project → Deploy from your repo. Railway detects the
-   `Dockerfile` and builds it.
-2. **Add a volume.** Service → Variables/Volumes → **Add Volume**, mount path `/data`.
-   (The Dockerfile declares `VOLUME ["/data"]` and defaults `VAULT_PATH=/data/vault`.)
+> **Do not declare a volume in the Dockerfile.** Railway rejects the `VOLUME` instruction
+> ("docker VOLUME is not supported") — the persistent disk is attached from the service
+> settings (step 2), not baked into the image. The Dockerfile intentionally omits it.
+
+1. **Create the service.** New Project → Deploy from your repo. Railway reads `railway.json`
+   and builds the `Dockerfile`.
+2. **Add a volume.** Service → **Volumes** → **Add Volume**, mount path `/data`. This is the
+   only source of production state; the image defaults `VAULT_PATH=/data/vault`, and the
+   entrypoint seeds it once on first boot.
 3. **Set variables** (Service → Variables): everything in the table above. Set
    `PUBLIC_URL` to the Railway-provided domain, `NEXUS_ENV=prod`.
 4. **Expose the port.** Railway sets `$PORT`; the entrypoint binds it automatically. Add a
    public domain under Settings → Networking.
-5. **Health check.** Settings → Deploy → Health Check Path = `/health`.
+5. **Health check.** Already set to `/health` via `railway.json` (override under
+   Settings → Deploy if needed).
 6. **Cron.** Add a **Cron Schedule** (or a second tiny "cron" service) that runs on your
    cadence and calls the app over HTTP — Nexus triggers cron via HTTP, no second process
    needs the volume (spec §5.6):
