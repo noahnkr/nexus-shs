@@ -29,6 +29,7 @@ def read_tools() -> dict[str, Callable[..., Any]]:
         "get_note": queries.get_note,
         "get_entity": queries.get_entity,
         "list_entities": queries.list_entities,
+        "list_reference": queries.list_reference,
         "search_logs": queries.search_logs,
         "list_open_tasks": queries.list_open_tasks,
         # FORK: "example_search_records": ExampleClient(...).search_records, etc.
@@ -80,6 +81,19 @@ _SPECS: dict[str, tuple[str, dict]] = {
         {
             "type": "object",
             "properties": {"kind": {"type": "string"}, "status": {"type": "string"}},
+        },
+    ),
+    "list_reference": (
+        "Filter knowledge-base notes by category/status/audience — a pure metadata query "
+        "(no search). Use to survey what reference material exists, e.g. status='draft' "
+        "for ingested notes awaiting review.",
+        {
+            "type": "object",
+            "properties": {
+                "category": {"type": "string"},
+                "status": {"type": "string"},
+                "audience": {"type": "string"},
+            },
         },
     ),
     "search_logs": (

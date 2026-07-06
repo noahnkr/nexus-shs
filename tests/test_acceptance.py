@@ -137,7 +137,18 @@ def test_mcp_registers_vault_tools_only():
 
     names = sorted(t.name for t in asyncio.run(build_mcp().list_tools()))
     assert {"search_reference", "get_entity", "create_task", "append_log"} <= set(names)
+    # the knowledge-base curation surface (MCP-only for ingest/publish)
+    assert {"list_reference", "ingest_file", "ingest_batch", "set_note_status"} <= set(names)
     assert not any("send" in n for n in names)
+
+
+def test_kb_curation_tools_are_mcp_only():
+    """Ingest + publish are the OWNER's tools; the ambient loop must not self-publish."""
+    from nexus.agents.toolset import all_tools
+
+    names = set(all_tools())
+    assert "list_reference" in names  # the read IS shared with the loop
+    assert not {"ingest_file", "ingest_batch", "set_note_status"} & names
 
 
 # --- §3.4 RRF fusion + hybrid (BM25-only) search ------------------------------------
@@ -263,6 +274,37 @@ def test_ingest_preserves_extracted_body_for_binary_formats(tmp_path, monkeypatc
     assert note.category == "pricing"  # curator override beat the classifier
     assert (io.vault_root() / "system" / "attachments" / "rates.html").exists()
     assert any(h.title == "Rate Sheet" for h in get_index().query("companion care hourly rate"))
+
+
+def test_kb_lifecycle_ingest_list_publish(tmp_path, monkeypatch):
+    """The full curation loop: ingest a draft -> list it -> publish it -> verify state."""
+    import pytest as _pytest
+
+    from nexus import writes
+    from nexus.ingest import pipeline
+    from nexus.vault import io, queries
+
+    src = tmp_path / "onboarding.txt"
+    src.write_text("New caregivers shadow a senior caregiver for two shifts.", encoding="utf-8")
+    monkeypatch.setattr(
+        pipeline, "classify",
+        lambda text, hint_family: {"title": "Caregiver Onboarding", "summary": "shadowing"},
+    )
+    path = pipeline.ingest_file(src, overrides={"category": "service_sop"})
+
+    drafts = queries.list_reference(status="draft")
+    assert any(r["title"] == "Caregiver Onboarding" for r in drafts)
+    assert queries.list_reference(status="draft", category="pricing") == []  # filters compose
+
+    writes.set_note_status(str(path), "published")
+    note, _ = io.read_note(path)
+    assert note.status == "published"
+    assert queries.list_reference(status="draft") == []
+
+    with _pytest.raises(ValueError):
+        writes.set_note_status(str(path), "open")  # task statuses rejected for reference
+    with _pytest.raises(FileNotFoundError):
+        writes.set_note_status("../outside.md", "published")  # can't escape the vault
 
 
 def test_get_note_drills_into_a_search_hit():

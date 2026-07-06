@@ -41,22 +41,32 @@ def get_note(path: str) -> dict[str, Any] | None:
     underlying text so answers can quote the source. `source_ref` on the record cites the
     archived original. Paths outside the vault (or in non-note dirs) return None.
     """
-    root = io.vault_root().resolve()
-    given = Path(path)
-    # Hits carry paths as emitted by the vault walk (relative to CWD when vault_path is
-    # relative); also accept absolute paths and vault-root-relative paths.
-    candidates = [given] if given.is_absolute() else [given, root / given]
-    target = next((c.resolve() for c in candidates if c.is_file()), None)
-    if target is None or target.name == io.INDEX_FILENAME:
+    target = io.resolve_note_path(path)
+    if target is None:
         return None
-    try:
-        rel = target.relative_to(root)
-    except ValueError:
-        return None  # escapes the vault
-    if rel.parts and rel.parts[0] in io.NON_NOTE_DIRS:
-        return None  # attachments/context are not queryable notes
     note, body = io.read_note(target)
     return _as_record(target, note, body)
+
+
+def list_reference(
+    category: str | None = None, status: str | None = None, audience: str | None = None
+) -> list[dict[str, Any]]:
+    """Filter knowledge-base notes by category/status/audience — PURE METADATA, NO embedder.
+
+    The curation view of the reference family: `status="draft"` lists ingested notes
+    awaiting review/publication; `category=...` audits one slice of the taxonomy.
+    """
+    out: list[dict[str, Any]] = []
+    for path, note, _ in io.iter_notes(io.family_dir(Family.reference)):
+        rec = note.model_dump(mode="json")
+        if category is not None and rec.get("category") != category:
+            continue
+        if status is not None and rec.get("status") != status:
+            continue
+        if audience is not None and rec.get("audience") != audience:
+            continue
+        out.append(_as_record(path, note))
+    return sorted(out, key=lambda r: r.get("updated", ""), reverse=True)
 
 
 def _digits(value: str) -> str:
