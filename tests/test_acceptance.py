@@ -38,6 +38,27 @@ def test_app_imports_and_health_route_present():
     assert "/webhooks/{source}" in paths
 
 
+def test_mcp_exact_path_never_redirects():
+    """`POST /mcp` (no trailing slash — how MCP clients are configured) must be served
+    directly, NOT 307-redirected: behind Railway's edge the redirect round trip is what
+    surfaced as 421 Misdirected Request (MountSlashMiddleware)."""
+    from starlette.testclient import TestClient
+
+    from nexus.app import app
+
+    client = TestClient(app)
+    for path in ("/mcp", "/mcp/"):
+        resp = client.post(
+            path,
+            json={"jsonrpc": "2.0", "method": "initialize", "id": 1},
+            headers={"accept": "application/json, text/event-stream"},
+            follow_redirects=False,
+        )
+        assert resp.status_code not in (307, 308, 404), f"{path} -> {resp.status_code}"
+        # buffered JSON (or a JSON auth error) — never a redirect, never chunked SSE
+        assert resp.headers.get("content-type", "").startswith("application/json")
+
+
 # --- §3.2 schema: discriminated union + extra="forbid" -------------------------------
 
 
