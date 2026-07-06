@@ -38,7 +38,11 @@ def build_app() -> Starlette:
     try:
         from nexus.tools import build_mcp
 
-        mcp_app = build_mcp().http_app(path="/")
+        # json_response + stateless_http: reply with a single buffered application/json
+        # body instead of an SSE stream. Railway's edge proxy rejects the chunked
+        # text/event-stream response with 421 Misdirected Request; buffered JSON passes
+        # cleanly, and a tools-only server needs no server-initiated SSE channel.
+        mcp_app = build_mcp().http_app(path="/", json_response=True, stateless_http=True)
         routes.append(Mount("/mcp", app=mcp_app))
         lifespan = mcp_app.lifespan
     except Exception:  # noqa: BLE001 — MCP is optional for the bare HTTP skeleton
