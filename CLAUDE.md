@@ -167,7 +167,7 @@ it polls) its sync to `jobs.DETERMINISTIC_JOBS`. When you touch the schema, re-r
 ## Remaining stubs (fill in a fork)
 
 `connectors/example/client.py` (outbound HTTP), `connectors/example/sync.py` (poll-sync),
-binary-format extractors in `ingest/extract.py` (text/HTML handled), the `notify` transport
-in `agents/notify.py` (logs by default), and the Batches-API path in `ingest/batch.py`
+OCR for scanned PDFs in `ingest/extract.py` (text/HTML/PDF/DOCX handled), the `notify`
+transport in `agents/notify.py` (logs by default), and the Batches-API path in `ingest/batch.py`
 (a drop-in optimization over the working per-file loop). Each carries a
 `NotImplementedError("§…")` pointing at its contract.

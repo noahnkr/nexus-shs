@@ -6,9 +6,10 @@ state.*
 
 ## 1. Reference (author/ingest first)
 
-Ingest with `ingest_file(path, category=..., audience=..., subfolder=...)` or
-`ingest_batch(...)` for a folder. Drafts land as `status: draft`; a human promotes to
-`published` after review.
+Ingest with `ingest_file(path, overrides={"category": ..., "audience": ...}, subfolder=...)`
+or `ingest_batch([...], overrides=...)` for a folder — `overrides` pins frontmatter you
+already know over the classifier's guess. Drafts land as `status: draft`; a human promotes
+to `published` after review.
 
 - [ ] **Intake / sales scripts** (`category=intake_script`) — how to talk to a new inquiry
       at each WelcomeHome stage: qualifying questions, objection handling, what to say when

@@ -119,7 +119,7 @@ Notes are markdown + YAML frontmatter, versioned in git, browsable in
 ## Quickstart (local)
 
 ```bash
-uv sync                       # or: pip install -e ".[dev]"
+pip install -e ".[dev]"
 cp .env.example .env          # fill in secrets (see below)
 uvicorn nexus.app:app --reload
 curl localhost:8000/health    # -> {"status":"ok","env":"dev"}

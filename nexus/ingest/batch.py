@@ -22,13 +22,17 @@ __all__ = ["ingest_batch", "extract_text", "assemble"]
 
 
 def ingest_batch(
-    sources: list[Path], *, family: Family = Family.reference, subfolder: str | None = None
+    sources: list[Path],
+    *,
+    family: Family = Family.reference,
+    subfolder: str | None = None,
+    overrides: dict | None = None,
 ) -> list[Path]:
     """Ingest many sources, reindexing once at the end (§3.7)."""
     paths: list[Path] = []
     for src in sources:
         try:
-            paths.append(ingest_file(src, family=family, subfolder=subfolder))
+            paths.append(ingest_file(src, family=family, subfolder=subfolder, overrides=overrides))
         except NotImplementedError:
             continue  # unsupported format — skip, keep the batch going
     _reindex_once()

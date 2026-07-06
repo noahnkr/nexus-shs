@@ -26,6 +26,7 @@ def read_tools() -> dict[str, Callable[..., Any]]:
     """Read-only tools used in stage 3 (gather)."""
     return {
         "search_reference": queries.search_reference,
+        "get_note": queries.get_note,
         "get_entity": queries.get_entity,
         "list_entities": queries.list_entities,
         "search_logs": queries.search_logs,
@@ -61,9 +62,16 @@ _SPECS: dict[str, tuple[str, dict]] = {
             "required": ["query"],
         },
     ),
+    "get_note": (
+        "Fetch one note's FULL content (frontmatter + body) by the `path` from a search "
+        "hit. Use after search_reference/search_logs to read and quote the source text; "
+        "the returned source_ref cites the archived original.",
+        {"type": "object", "properties": {"path": {"type": "string"}}, "required": ["path"]},
+    ),
     "get_entity": (
-        "Resolve a name to one tracked thing's CURRENT state. Call this FIRST for any "
-        "person/org-specific request (entity-first). Returns null if not found.",
+        "Resolve a name, phone number, or email to one tracked thing's CURRENT state. "
+        "Call this FIRST for any person/org-specific request (entity-first). Returns null "
+        "if not found.",
         {"type": "object", "properties": {"name": {"type": "string"}}, "required": ["name"]},
     ),
     "list_entities": (

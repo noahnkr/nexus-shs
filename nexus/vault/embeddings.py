@@ -27,7 +27,10 @@ def embed(texts: list[str]) -> list[list[float]] | None:
     """
     if not settings.semantic_enabled or not texts:
         return None
-    return _embed_remote(texts)
+    try:
+        return _embed_remote(texts)
+    except httpx.HTTPError:
+        return None  # provider down / rate-limited -> degrade to BM25-only, don't break search
 
 
 def _embed_remote(texts: list[str]) -> list[list[float]]:
