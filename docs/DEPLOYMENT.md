@@ -119,6 +119,57 @@ VAULT_PATH=/srv/nexus/vault NEXUS_ENV=prod uvicorn nexus.app:app --host 0.0.0.0 
 ```
 Seed the volume yourself the first time (`cp -a vault/. /srv/nexus/vault/`).
 
+## Connecting Claude to `/mcp` (and the Railway 421 saga)
+
+Two very different client paths exist — know which one you're debugging:
+
+1. **claude.ai / Claude Desktop "custom connectors"** — the connection originates from
+   **Anthropic's servers**, not your machine. Local success (MCP Inspector, curl,
+   localhost) proves nothing about this path.
+2. **`claude_desktop_config.json` with `mcp-remote`** — a local stdio proxy on your
+   machine talks to your server over plain HTTP/1.1. This is the path that supports the
+   static `MCP_TOKEN` bearer, and the one we recommend for a private Nexus:
+
+   ```json
+   {
+     "mcpServers": {
+       "nexus": {
+         "command": "npx",
+         "args": [
+           "mcp-remote", "https://<your-app>.up.railway.app/mcp",
+           "--header", "Authorization: Bearer <MCP_TOKEN>"
+         ]
+       }
+     }
+   }
+   ```
+
+   Custom connectors (path 1) cannot attach a static bearer — they only speak OAuth — so
+   against this server's `StaticTokenVerifier` they will always stop at 401 even once
+   transport issues are resolved. Use `mcp-remote`, or put a proper OAuth provider in
+   front if you need path 1.
+
+### `421 Misdirected Request` checklist
+
+Railway's edge (hikari) is strict; three distinct causes all present as 421:
+
+- **Chunked SSE responses.** The edge rejects `text/event-stream` chunked replies. Fixed
+  in code: the MCP app runs `json_response=True, stateless_http=True` (buffered JSON,
+  no server-initiated stream).
+- **The `/mcp` → `/mcp/` redirect.** Clients are configured with the no-slash URL; the
+  307 bounce back through the edge (with an `http://` Location when proxy headers aren't
+  trusted) misdirects. Fixed in code: `MountSlashMiddleware` serves the exact path, and
+  the entrypoint passes `--proxy-headers --forwarded-allow-ips '*'` so uvicorn builds
+  `https://` URLs behind the proxy. Verify with:
+  `curl -si -X POST https://<app>/mcp -H 'accept: application/json, text/event-stream' -H 'content-type: application/json' -d '{}'`
+  — you should see a JSON response (401 without the bearer), **never** a 307.
+- **HTTP/2 connection coalescing on `*.up.railway.app`.** All Railway apps share edge
+  IPs and a wildcard cert, so a client that pools HTTP/2 connections (Anthropic's
+  connector fetcher does) can reuse a connection whose TLS SNI names a *different*
+  Railway app — the edge answers 421 by design. Not fixable in app code. Fix by
+  attaching a **custom domain** to the service (its own cert defeats coalescing), or by
+  using the `mcp-remote` path above (HTTP/1.1, dedicated connection).
+
 ## Securing the surface
 
 - **Webhooks** self-authenticate (per-source HMAC, constant-time; replay window; 503 if no

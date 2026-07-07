@@ -6,6 +6,7 @@ extra task/anyio overhead BaseHTTPMiddleware imposes. Two concerns:
 
   - LoggingMiddleware: structured access log around each request.
   - BodyCapMiddleware: reject oversized bodies early (defense at the edge).
+  - MountSlashMiddleware: serve `/mcp` at the exact path, no 307 (proxy-edge safety).
 """
 
 from __future__ import annotations
@@ -47,6 +48,29 @@ class LoggingMiddleware:
             status_holder.get("status"),
             dur_ms,
         )
+
+
+class MountSlashMiddleware:
+    """Rewrite an exact mount path ('/mcp') to its slashed form ('/mcp/') before routing.
+
+    Without this, Starlette's redirect_slashes answers `POST /mcp` with a 307 whose
+    Location is built from the ASGI scope. Behind Railway's edge that redirect is where
+    MCP clients die: Claude's connector fetcher POSTs to the no-slash URL, and bouncing
+    it back through the edge (worst case with an `http://` Location when proxy headers
+    aren't trusted) surfaces as `421 Misdirected Request`. Serving the exact path
+    directly removes the round trip entirely — MCP requests never redirect.
+    """
+
+    def __init__(self, app: ASGIApp, paths: tuple[str, ...] = ("/mcp",)) -> None:
+        self.app = app
+        self.paths = paths
+
+    async def __call__(self, scope, receive, send) -> None:
+        if scope["type"] == "http" and scope.get("path") in self.paths:
+            scope = dict(scope)
+            scope["path"] = scope["path"] + "/"
+            scope["raw_path"] = scope["path"].encode()
+        await self.app(scope, receive, send)
 
 
 class BodyCapMiddleware:

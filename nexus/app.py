@@ -17,7 +17,7 @@ from starlette.responses import JSONResponse
 from starlette.routing import Route
 
 from nexus.config import settings
-from nexus.middleware import BodyCapMiddleware, LoggingMiddleware
+from nexus.middleware import BodyCapMiddleware, LoggingMiddleware, MountSlashMiddleware
 
 
 async def health(_: Request) -> JSONResponse:
@@ -51,7 +51,13 @@ def build_app() -> Starlette:
     # Pure-ASGI middleware, outermost first (§9). Starlette builds the stack so there is
     # no self-referential wrapping (which would recurse infinitely). The /mcp bearer guard
     # lives inside the FastMCP app (StaticTokenVerifier, see tools.build_mcp), not here.
-    middleware = [Middleware(LoggingMiddleware), Middleware(BodyCapMiddleware)]
+    # MountSlashMiddleware serves the exact /mcp path with no 307 — behind Railway's edge
+    # that redirect round-trip is what surfaced as 421 Misdirected Request for MCP clients.
+    middleware = [
+        Middleware(LoggingMiddleware),
+        Middleware(BodyCapMiddleware),
+        Middleware(MountSlashMiddleware),
+    ]
     return Starlette(routes=routes, middleware=middleware, lifespan=lifespan)
 
 
