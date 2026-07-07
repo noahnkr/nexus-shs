@@ -40,23 +40,60 @@ def test_app_imports_and_health_route_present():
 
 def test_mcp_exact_path_never_redirects():
     """`POST /mcp` (no trailing slash — how MCP clients are configured) must be served
-    directly, NOT 307-redirected: behind Railway's edge the redirect round trip is what
-    surfaced as 421 Misdirected Request (MountSlashMiddleware)."""
+    directly, NOT 307-redirected: behind Railway's edge the redirect round trip breaks
+    MCP clients. The path lives inside the FastMCP app (http_app(path="/mcp")) mounted
+    at "/", so there is no mount boundary to redirect across."""
     from starlette.testclient import TestClient
 
     from nexus.app import app
+    from nexus.config import settings
 
-    client = TestClient(app)
-    for path in ("/mcp", "/mcp/"):
+    with TestClient(app) as client:  # context manager runs the MCP session lifespan
         resp = client.post(
-            path,
-            json={"jsonrpc": "2.0", "method": "initialize", "id": 1},
-            headers={"accept": "application/json, text/event-stream"},
+            "/mcp",
+            json={
+                "jsonrpc": "2.0",
+                "method": "initialize",
+                "id": 1,
+                "params": {
+                    "protocolVersion": "2025-06-18",
+                    "capabilities": {},
+                    "clientInfo": {"name": "test", "version": "0"},
+                },
+            },
+            headers={
+                "accept": "application/json, text/event-stream",
+                "authorization": f"Bearer {settings.mcp_token}",
+            },
             follow_redirects=False,
         )
-        assert resp.status_code not in (307, 308, 404), f"{path} -> {resp.status_code}"
-        # buffered JSON (or a JSON auth error) — never a redirect, never chunked SSE
-        assert resp.headers.get("content-type", "").startswith("application/json")
+    assert resp.status_code == 200, f"/mcp -> {resp.status_code}"
+    # buffered JSON — never a redirect, never chunked SSE
+    assert resp.headers.get("content-type", "").startswith("application/json")
+
+
+def test_mcp_allows_public_host_header(monkeypatch):
+    """fastmcp >= 3.4.3 rejects unknown Host headers with 421 Misdirected Request (DNS
+    rebinding protection). The public domain from PUBLIC_URL must be allowlisted or every
+    request through Railway's proxy dies at the guard. PUBLIC_URL is a bare domain on
+    Railway (no scheme) — that form must parse too."""
+    from starlette.testclient import TestClient
+
+    from nexus import app as app_mod
+    from nexus.config import settings
+
+    domain = "myapp-production.up.railway.app"
+    monkeypatch.setattr(settings, "public_url", domain)
+    assert app_mod._public_host(domain) == domain
+
+    client = TestClient(app_mod.build_app())
+    resp = client.post(
+        "/mcp",
+        json={"jsonrpc": "2.0", "method": "initialize", "id": 1},
+        headers={"accept": "application/json, text/event-stream", "host": domain},
+        follow_redirects=False,
+    )
+    assert resp.status_code != 421, f"Host {domain!r} rejected by DNS-rebinding guard"
 
 
 # --- §3.2 schema: discriminated union + extra="forbid" -------------------------------

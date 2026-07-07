@@ -10,6 +10,8 @@ Run: `uvicorn nexus.app:app`
 
 from __future__ import annotations
 
+from urllib.parse import urlsplit
+
 from starlette.applications import Starlette
 from starlette.middleware import Middleware
 from starlette.requests import Request
@@ -17,11 +19,18 @@ from starlette.responses import JSONResponse
 from starlette.routing import Route
 
 from nexus.config import settings
-from nexus.middleware import BodyCapMiddleware, LoggingMiddleware, MountSlashMiddleware
+from nexus.middleware import BodyCapMiddleware, LoggingMiddleware
 
 
 async def health(_: Request) -> JSONResponse:
     return JSONResponse({"status": "ok", "env": settings.nexus_env})
+
+
+def _public_host(url: str) -> str | None:
+    """Hostname from PUBLIC_URL, tolerating a bare domain with no scheme."""
+    if "://" not in url:
+        url = f"//{url}"
+    return urlsplit(url).hostname
 
 
 def build_app() -> Starlette:
@@ -32,18 +41,30 @@ def build_app() -> Starlette:
     routes = [Route("/health", health, methods=["GET"]), *ingress_routes]
     lifespan = None
 
-    # MCP tool surface mounted at /mcp — the SAME plain functions back chat and the
-    # server-side loop (§3.5). Its lifespan is threaded into the parent so the MCP session
-    # manager starts/stops correctly. Resilient: a bare HTTP server still boots without it.
+    # MCP tool surface at /mcp — the SAME plain functions back chat and the server-side
+    # loop (§3.5). The FastMCP app owns the path *inside itself* (http_app(path="/mcp"))
+    # and is mounted at "/" as the catch-all, so `/mcp` is served at the exact path with
+    # no trailing-slash mount and no 307 — the redirect a Mount("/mcp") would emit is
+    # what MCP clients behind Railway's edge choke on. Its lifespan is threaded into the
+    # parent so the MCP session manager starts/stops correctly. Resilient: a bare HTTP
+    # server still boots without it.
     try:
         from nexus.tools import build_mcp
 
         # json_response + stateless_http: reply with a single buffered application/json
-        # body instead of an SSE stream. Railway's edge proxy rejects the chunked
-        # text/event-stream response with 421 Misdirected Request; buffered JSON passes
-        # cleanly, and a tools-only server needs no server-initiated SSE channel.
-        mcp_app = build_mcp().http_app(path="/", json_response=True, stateless_http=True)
-        routes.append(Mount("/mcp", app=mcp_app))
+        # body instead of an SSE stream — a tools-only server needs no server-initiated
+        # SSE channel. allowed_hosts: fastmcp >= 3.4.3 ships default-on DNS-rebinding
+        # protection that 421s any Host outside localhost + the bind address, so the
+        # public domain must be allowlisted or every proxied request is rejected with
+        # 421 Misdirected Request.
+        host = _public_host(settings.public_url)
+        mcp_app = build_mcp().http_app(
+            path="/mcp",
+            json_response=True,
+            stateless_http=True,
+            allowed_hosts=[host] if host else None,
+        )
+        routes.append(Mount("/", app=mcp_app))
         lifespan = mcp_app.lifespan
     except Exception:  # noqa: BLE001 — MCP is optional for the bare HTTP skeleton
         pass
@@ -51,12 +72,9 @@ def build_app() -> Starlette:
     # Pure-ASGI middleware, outermost first (§9). Starlette builds the stack so there is
     # no self-referential wrapping (which would recurse infinitely). The /mcp bearer guard
     # lives inside the FastMCP app (StaticTokenVerifier, see tools.build_mcp), not here.
-    # MountSlashMiddleware serves the exact /mcp path with no 307 — behind Railway's edge
-    # that redirect round-trip is what surfaced as 421 Misdirected Request for MCP clients.
     middleware = [
         Middleware(LoggingMiddleware),
         Middleware(BodyCapMiddleware),
-        Middleware(MountSlashMiddleware),
     ]
     return Starlette(routes=routes, middleware=middleware, lifespan=lifespan)
 
