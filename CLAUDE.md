@@ -122,7 +122,11 @@ The agent-loop test is `skipif` without `ANTHROPIC_API_KEY`; everything else run
 | `nexus/agents/toolset.py` | ⚙ loop tool registry + `anthropic_tool_specs` |
 | `nexus/agents/reactive.py` / `scheduled.py` | thin `run_loop` wrappers (lean/job-name prompts, model tiers) |
 | `nexus/agents/notify.py` | owner notification (swappable transport; logs by default) |
-| `nexus/tools/__init__.py` | `register_all` + `build_mcp` (MCP surface = same plain functions, plus MCP-only KB curation: `ingest_file` · `ingest_batch` · `set_note_status`; plus workflow build/manage tools) |
+| `nexus/tools/__init__.py` | `register_all` aggregator + `build_mcp`; delegates to the per-usage modules below |
+| `nexus/tools/vault.py` | read + vault-write MCP tools (same plain functions as the loop's toolset) |
+| `nexus/tools/knowledge_base.py` | MCP-only KB curation: `ingest_file` · `ingest_batch` · `set_note_status` |
+| `nexus/tools/workflows.py` | MCP-only workflow build & manage tools |
+| `nexus/tools/connectors.py` | ⚙ per-connector `tools()` seam (mirrors `workflows.blocks`) |
 | `nexus/workflows/schema.py` | `WorkflowSpec` (definition) / `RunState` (instance); `validate_graph` |
 | `nexus/workflows/blocks.py` | ⚙ block registry (trigger/condition/action); refuses `external_send`; connector `blocks()` seam |
 | `nexus/workflows/store.py` | validated JSON persistence under `vault/system/workflows/` (+ `runs/`) |
@@ -171,8 +175,9 @@ steps and writes the seams for you. Manual reference:
 [README → Forking](README.md#forking-nexus-for-your-business) has the ordered 8 steps.
 The three primary seams: `vault/schema.py`, `connectors/ingress/rules.py`,
 `connectors/<source>/`. Registering a new connector = add its `webhook` module to
-`ingress.routes.CONNECTORS`, its reads to `agents/toolset.py` + `tools/__init__.py`, and (if
-it polls) its sync to `jobs.DETERMINISTIC_JOBS`. When you touch the schema, re-run `pytest`.
+`ingress.routes.CONNECTORS`, its reads to `agents/toolset.py` + `tools/vault.py` (or a
+connector-specific `tools()` seam picked up by `tools/connectors.py`), and (if it polls)
+its sync to `jobs.DETERMINISTIC_JOBS`. When you touch the schema, re-run `pytest`.
 
 ## Remaining stubs (fill in a fork)
 
