@@ -74,6 +74,25 @@ def test_graph_validation_catches_bad_refs():
     assert validate_graph(_spec()) == []
 
 
+def test_validate_emission_unwraps_wrapper_key():
+    """The compile model sometimes nests the draft under one key ({"workflow": {...}});
+    _validate_emission peels it, and a genuine schema failure becomes a retryable problem
+    instead of an uncaught ValidationError (regression: create_workflow crash)."""
+    from nexus.workflows import builder
+
+    flat = {k: getattr(_spec(), k) for k in ("slug", "name", "description", "entry")}
+    flat["trigger"] = _spec().trigger.model_dump()
+    flat["steps"] = [s.model_dump() for s in _spec().steps]
+
+    draft, problems = builder._validate_emission({"workflow": flat})
+    assert draft is not None and problems == []
+    assert draft.slug == "test-flow"
+
+    # not a recognized wrapper -> surfaces as problems, never raises
+    bad_draft, bad_problems = builder._validate_emission({"nope": 1, "steps": []})
+    assert bad_draft is None and bad_problems
+
+
 def test_registry_refuses_external_send_blocks():
     from nexus.workflows.blocks import Block, BlockKind, register
 

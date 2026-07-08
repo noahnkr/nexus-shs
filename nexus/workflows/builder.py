@@ -17,6 +17,9 @@ Activation is a separate explicit step (`store.set_workflow_status(slug, "active
 from __future__ import annotations
 
 import json
+from typing import Any
+
+from pydantic import ValidationError
 
 from nexus.config import settings
 from nexus.vault import io
@@ -51,6 +54,40 @@ def _compile_tool() -> dict:
     }
 
 
+def _unwrap_emission(raw: Any) -> Any:
+    """Peel a spurious single wrapper key off the model's emission.
+
+    Despite the flat `WorkflowDraft` tool schema, the compile model occasionally nests the
+    draft under one wrapper key (e.g. ``{"workflow": {...}}`` / ``{"draft": {...}}``). Strip
+    exactly one such layer so validation sees the draft it expects.
+    """
+    if isinstance(raw, dict) and len(raw) == 1:
+        inner = next(iter(raw.values()))
+        if isinstance(inner, dict) and "steps" in inner:
+            return inner
+    return raw
+
+
+def _validate_emission(raw: Any) -> tuple[WorkflowDraft | None, list[str]]:
+    """Turn a raw tool emission into a validated draft plus any deterministic problems.
+
+    Schema mismatches (returned as problems, not raised) and graph/block errors both feed
+    the same retry loop, so a malformed emission is corrected rather than surfaced.
+    """
+    from nexus.workflows.blocks import get
+
+    try:
+        draft = WorkflowDraft.model_validate(_unwrap_emission(raw))
+    except ValidationError as e:
+        return None, [f"draft did not match the schema: {e.errors(include_url=False)}"]
+
+    problems = validate_graph(draft)
+    problems += [f"unknown block '{s.block}'" for s in draft.steps if get(s.block) is None]
+    if get(draft.trigger.block) is None:
+        problems.append(f"unknown trigger block '{draft.trigger.block}'")
+    return draft, problems
+
+
 async def compile_draft(request: str, existing: WorkflowSpec | None = None) -> WorkflowDraft:
     """One compile pass: NL request (+ optionally the current spec) -> validated draft.
 
@@ -58,8 +95,6 @@ async def compile_draft(request: str, existing: WorkflowSpec | None = None) -> W
     problems are fed back to the model, up to _MAX_COMPILE_ATTEMPTS.
     """
     import anthropic
-
-    from nexus.workflows.blocks import get
 
     client = anthropic.AsyncAnthropic(api_key=settings.anthropic_api_key)
     system = _SYSTEM + json.dumps(catalog(), indent=1)
@@ -85,13 +120,8 @@ async def compile_draft(request: str, existing: WorkflowSpec | None = None) -> W
             messages=messages,
         )
         block = next(b for b in resp.content if b.type == "tool_use")
-        draft = WorkflowDraft.model_validate(block.input)
-
-        problems = validate_graph(draft)
-        problems += [f"unknown block '{s.block}'" for s in draft.steps if get(s.block) is None]
-        if get(draft.trigger.block) is None:
-            problems.append(f"unknown trigger block '{draft.trigger.block}'")
-        if not problems:
+        draft, problems = _validate_emission(block.input)
+        if draft is not None and not problems:
             return draft
 
         last_problems = problems
