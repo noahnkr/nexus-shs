@@ -18,9 +18,12 @@ from datetime import UTC
 
 from starlette.responses import JSONResponse, Response
 
+from nexus.connectors.welcomehome.sync import run_sync as welcomehome_sync
+
 # Deterministic jobs: name -> plain async function (no LLM).
 DETERMINISTIC_JOBS: dict[str, Callable[[], Awaitable[None]]] = {
-    # "example-sync": example_sync_job,   # FORK: register poll-syncs here
+    # WelcomeHome Prospect poll-sync — run every 5-10 min ("respond within the hour").
+    "welcomehome-sync": welcomehome_sync,
 }
 
 # Agent jobs: the set of job names that wake the scheduled agent (intent == name).

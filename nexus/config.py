@@ -33,6 +33,7 @@ class Settings(BaseSettings):
 
     # --- per-source connector secrets (one per connectors/<source>/) ---
     example_webhook_secret: str | None = None
+    welcomehome_api_key: str | None = None  # Exports API token (docs/connectors/welcomehome.md)
 
     # --- owner notifications (§4.4) ---
     owner_contact: str | None = None

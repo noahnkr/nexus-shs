@@ -25,13 +25,20 @@
 
 ## Outbound (if reads / poll-sync)
 - API docs URL: https://crm.welcomehomesoftware.com/api-docs/index.html#tag/Exports
-- Auth: unconfirmed — check the Exports API docs for the auth scheme (likely API key or
-  bearer token issued per WelcomeHome account). Open question below.
-- Rate limits / pagination: the export endpoint is paginated; exact page size / rate limit
-  unconfirmed — read the docs above when implementing.
-- Poll-sync high-water field: use WelcomeHome's Prospect `updated_at` (or export's
-  equivalent last-modified column) as the high-water mark so re-polls only fetch changed
-  rows. Confirm the exact column name against the export schema.
+  (OpenAPI spec: https://crm.welcomehomesoftware.com/api-docs/v1/swagger.yaml)
+- Auth (CONFIRMED from the spec): `Authorization: Token token={api_key}` header; validate
+  with `GET /api/ping` (200 -> `{"account_id": ..}`, 401 -> bad credentials).
+- Endpoint (CONFIRMED): `GET /api/exports/community/all/table/Prospects` returns live,
+  paginated CSV. Default 1000 rows/page (max 10000); the next page is a cursor URL in the
+  `Link` response header (`rel="next"`); a cursor can only be used 3x per minute. All
+  timestamps UTC.
+- Poll-sync high-water field (CONFIRMED): `updated_at` — the endpoint documents
+  `filters[updated_at_after]` as the intended re-poll strategy and sorts by `updated_at`
+  by default.
+- Stages are ACCOUNT-CONFIGURABLE: `GET /api/stages` returns id/name/position/system_type;
+  the sync translates `stage_id` -> name -> vault `Status` via a normalization table
+  (`sync._STAGE_TO_STATUS`). `GET /api/lead_sources` likewise maps `lead_source_id` ->
+  referral source name.
 - Read endpoints the agent needs: none beyond the export for now — the poll-sync reconciles
   bulk state into `prospect` entities directly (§4.3 pattern); no live on-demand read tool
   is needed at this stage since the export already gives current Prospect state.
@@ -46,7 +53,7 @@
   nothing needs `supervised`.
 
 ## Secrets to add to .env
-- `WELCOMEHOME_API_KEY` (or bearer token — confirm exact scheme from the Exports API docs)
+- `WELCOMEHOME_API_KEY` — sent as `Authorization: Token token={key}` (confirmed scheme)
 
 ## Implementation steps (for the next agent)
 1. Copy `nexus/connectors/example/` → `nexus/connectors/welcomehome/`; keep only
@@ -72,13 +79,48 @@
    sample) and verify Prospects land as `prospect` entity notes with the correct `status`,
    and that a stage change produces a dispatched `Stimulus`.
 
+## Verified against the OpenAPI spec (swagger.yaml, checked 2026-07-13)
+- Auth, ping, export endpoint/pagination/cursor limits, `filters[updated_at_after]`,
+  `sort_by=updated_at` default, and `community_id=all` all match the implementation.
+- `status` enum is exactly `open | draft | closed | moved_in | marketing_qualified`; the
+  spec says to ignore `draft` (mid-creation) and `marketing_qualified` (not user-visible),
+  which the sync does. `moved_in` "could represent a former resident."
+- `/prospects` is POST-only (create); there is no list-GET — reads must go through the
+  export (or `/prospects/search` / `/prospects/{id}`), confirming the poll-sync design.
+- Prospects carry `discarded_at` / `discarded_by_id` / `merged_into_prospect_id`: the sync
+  treats a discarded or merged-away row as defunct — archives a tracked entity, never
+  creates one, and emits no delta.
+- The Prospect record has NO top-level name/phone/email — those live on nested
+  `residents_attributes[].person_attributes` (and `influencers_attributes` for family).
+
+## Verified against a LIVE export (real token, checked 2026-07-13)
+- CSV headers are TABLE-PREFIXED: `prospects.id`, `prospects.status`,
+  `prospects.inquiry_date`, `prospects.discarded_at`, `stages.name`, `lead_sources.name`,
+  `communities.name`, ... — `sync._map_row` matches these first (bare names kept as
+  fallbacks). Stage and lead-source NAMES are inlined in the row, so the `/stages` +
+  `/lead_sources` id→name maps are only a fallback.
+- The Prospects export carries NO `updated_at` column (the server-side
+  `filters[updated_at_after]` still works) and NO resident name/contact columns. The sync
+  therefore (a) advances the high-water mark to poll-start-time minus a 5-minute overlap
+  (`sync._REPOLL_OVERLAP`) — re-pulled rows are quiet since an unchanged upsert emits no
+  delta — and (b) joins the `Residents` export (`residents.prospect_id` → `people.first/
+  last_name`, `people.cell_phone`, `people.email`; `first_resident` row wins) for
+  name/phone/email.
+- No last-contact column either: `last_contact_date` is derived from the `Activities`
+  export (`record_type == "Prospect"`, max `completed_at` per `record_id`), pulled
+  incrementally with the same mark; it only moves forward.
+- This account's actual stage labels (from `/stages`): Inquiry → Contact Attempted →
+  Contact Made → Home Visit Scheduled → Home Visit Completed → Start of Care. All six are
+  in `sync._STAGE_TO_STATUS`.
+
 ## Open questions / unknowns
-- Exact auth scheme for the Exports API (API key vs bearer vs OAuth) — check docs / ask
-  WelcomeHome support.
-- Exact column names in the export for Prospect id, stage, `updated_at`, referral source,
-  and family contact(s) — confirm against a real export sample.
-- Whether "stage" in the export maps 1:1 to the six stages already modeled in `Status`
-  (`inquiry`/`attempted`/`contact_made`/`visit_scheduled`/`visit_completed`/`soc`), or uses
-  different internal labels that need a translation table.
-- Definition of "stale" for the `prospect_stale` delta (how long without contact/movement
-  before flagging) — confirm with Brennen once the sync is running.
+- ~~Exact auth scheme~~ RESOLVED: `Authorization: Token token={api_key}` (see Outbound).
+- ~~Exact CSV column HEADER names~~ RESOLVED against a live export — see "Verified against
+  a LIVE export" above.
+- ~~Stage mapping~~ RESOLVED: this account's six stage labels are all in
+  `sync._STAGE_TO_STATUS` (verified via `/api/stages`).
+- Definition of "stale" for the `prospect_stale` delta — provisionally
+  `sync.STALE_AFTER = 2 days` without contact/movement (vault dates are day-granular);
+  confirm the window with Brennen once the sync is running.
+- Family contacts (influencers) are not populated by the sync yet — the `Influencers`
+  export table exists and could be joined on prospect id the same way `Residents` is.
