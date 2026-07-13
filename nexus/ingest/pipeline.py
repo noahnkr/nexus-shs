@@ -63,7 +63,7 @@ def ingest_file(
     io.write_note(note, path, body)
 
     _archive_original(source)
-    _reindex()
+    _settle_indexes()
     return path
 
 
@@ -77,9 +77,9 @@ def _archive_original(source: Path) -> None:
         pass  # best-effort; a missing original must not block the draft
 
 
-def _reindex() -> None:
-    from nexus.vault.index import regenerate_all
-    from nexus.vault.search import reindex
+def _settle_indexes() -> None:
+    """Batch boundary: the gate marked the indexes dirty; INDEX.md settles here and
+    search rebuilds lazily on its next query."""
+    from nexus.vault.index import regenerate_if_dirty
 
-    reindex()
-    regenerate_all()
+    regenerate_if_dirty()

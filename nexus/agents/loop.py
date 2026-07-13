@@ -145,8 +145,9 @@ async def run_loop(
             )
         messages.append({"role": "user", "content": tool_results})
 
-    # Writes during the loop changed the corpus — reindex once (§6.1).
-    from nexus.vault.search import reindex
+    # Writes during the loop dirtied the indexes via the gate; settle them once here
+    # (§6.1). Search rebuilds lazily on its next query; INDEX.md regenerates now.
+    from nexus.vault.index import regenerate_if_dirty
 
-    reindex()
+    regenerate_if_dirty()
     return result

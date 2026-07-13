@@ -120,10 +120,33 @@ def regenerate_all(root: Path | None = None) -> list[Path]:
     Skips non-note folders (system/ attachments, context/) so no INDEX.md is generated
     inside them (io.NON_NOTE_DIRS).
     """
+    global _dirty
     root = root or io.vault_root()
     written: list[Path] = [regenerate(root)]
     for sub in sorted(p for p in root.rglob("*") if p.is_dir()):
         if sub.relative_to(root).parts[0] in io.NON_NOTE_DIRS:
             continue
         written.append(regenerate(sub))
+    _dirty = False
     return written
+
+
+_dirty: bool = False
+
+
+def mark_dirty() -> None:
+    """Flag the INDEX.md files as stale. Called by the write gate (io.write_note) on
+    every successful write; batch boundaries call regenerate_if_dirty() to coalesce."""
+    global _dirty
+    _dirty = True
+
+
+def regenerate_if_dirty() -> list[Path]:
+    """Regenerate INDEX.md files iff a write dirtied them since the last regeneration.
+
+    THE batch boundary primitive: cheap no-op when clean, so every path that *might*
+    have written (agent loop end, cron job end, stream event, workflow run end, MCP
+    write tool) calls it unconditionally. Stale indexes are worse than none (§3.3);
+    scattered per-write regeneration is worse than one per batch.
+    """
+    return regenerate_all() if _dirty else []

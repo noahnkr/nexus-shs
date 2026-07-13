@@ -153,9 +153,13 @@ Zapier-shaped automation: build in prose, preview as Mermaid, manage statuses an
   recipient, body)` so the owner approves-and-sends in one step. Keep it that way.
 - **Log-always.** `routes.py` appends to the event log inline, before dispatch, regardless
   of tier — so a later crash never loses the event. Dedup is best-effort on top.
-- **Reindex once after the loop.** `run_loop` calls `search.reindex()` at the end because
-  writes during the loop changed the corpus. The system prompt + tool specs are a stable
-  prefix and are prompt-cached.
+- **Dirty-flag indexing at the gate.** Every `io.write_note` marks both indexes dirty, so
+  NO write path (loop, sync, stream, workflow, MCP tool) can leave them stale. Search
+  rebuilds lazily on the next `get_index()` query; INDEX.md regenerates via
+  `index.regenerate_if_dirty()` at batch boundaries (loop end, cron-job end, workflow-run
+  end, MCP write tools, stream log-only events) — a cheap no-op when clean. Don't add
+  per-write regeneration; the coalescing is the point. The system prompt + tool specs are
+  a stable prefix and are prompt-cached.
 - **Two memories (don't conflate).** Retrieved memory = `append_memory` → `reference/
   memory.md`, pulled via `search_reference` (scales). Always-on context = small stable
   `vault/context/*.md` (SOUL/USER) injected verbatim by `agents/context.py`. The fixed loop

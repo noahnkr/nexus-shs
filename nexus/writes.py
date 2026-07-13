@@ -120,16 +120,11 @@ def set_note_status(path: str, status: str) -> Path:
     note.status = new_status
     note.updated = datetime.now(UTC).date()
     result = io.write_note(note, target, body)
-    _refresh_indexes()  # no loop wraps this write, so refresh search + INDEX.md here
+    # No loop wraps this MCP-only write; settle INDEX.md now (search self-heals lazily).
+    from nexus.vault.index import regenerate_if_dirty
+
+    regenerate_if_dirty()
     return result
-
-
-def _refresh_indexes() -> None:
-    from nexus.vault.index import regenerate_all
-    from nexus.vault.search import reindex
-
-    reindex()
-    regenerate_all()
 
 
 def append_memory(fact: str) -> Path:

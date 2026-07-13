@@ -58,13 +58,21 @@ def register(target: Any) -> None:
     def list_open_tasks() -> list[dict]:
         return queries.list_open_tasks()
 
+    # MCP writes are single-shot chat actions with no agent loop around them, so each
+    # settles INDEX.md itself (search self-heals lazily via the gate's dirty flag).
+    def _settled(path) -> str:
+        from nexus.vault.index import regenerate_if_dirty
+
+        regenerate_if_dirty()
+        return str(path)
+
     @target.tool(name="append_log", description=d("append_log"))
     def append_log(summary: str) -> str:
-        return str(writes.append_log(summary))
+        return _settled(writes.append_log(summary))
 
     @target.tool(name="update_entity", description=d("update_entity"))
     def update_entity(name: str, kind: str, changes: dict) -> str:
-        return str(writes.update_entity(name, kind, changes))
+        return _settled(writes.update_entity(name, kind, changes))
 
     @target.tool(name="create_task", description=d("create_task"))
     def create_task(
@@ -73,8 +81,10 @@ def register(target: Any) -> None:
         recipient: str | None = None,
         body: str | None = None,
     ) -> str:
-        return str(writes.create_task(action, channel=channel, recipient=recipient, body=body))
+        return _settled(
+            writes.create_task(action, channel=channel, recipient=recipient, body=body)
+        )
 
     @target.tool(name="append_memory", description=d("append_memory"))
     def append_memory(fact: str) -> str:
-        return str(writes.append_memory(fact))
+        return _settled(writes.append_memory(fact))

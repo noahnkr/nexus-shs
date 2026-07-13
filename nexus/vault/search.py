@@ -218,16 +218,33 @@ def _cosine(a: list[float], b: list[float]) -> float:
 
 
 _index: HybridIndex | None = None
+_dirty: bool = False
+
+
+def mark_dirty() -> None:
+    """Flag the corpus as changed. Called by the write gate (io.write_note) on EVERY
+    successful write, so no write path can leave the index stale. The rebuild itself is
+    lazy — the next get_index() pays it once, however many writes accumulated."""
+    global _dirty
+    _dirty = True
 
 
 def get_index() -> HybridIndex:
-    global _index
+    """The live index, rebuilt on first use and whenever the write gate dirtied it."""
+    global _index, _dirty
     if _index is None:
         _index = HybridIndex()
         _index.rebuild()
+        _dirty = False
+    elif _dirty:
+        _index.rebuild()
+        _dirty = False
     return _index
 
 
 def reindex() -> None:
-    """Rebuild the corpus. Called once after an agent loop, since writes changed it (§6.1)."""
+    """Force a rebuild now. Rarely needed — the gate + lazy get_index() keep the corpus
+    consistent; this remains for explicit refreshes (e.g. after hand edits in Obsidian)."""
     get_index().rebuild()
+    global _dirty
+    _dirty = False

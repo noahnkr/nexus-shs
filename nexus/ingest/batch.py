@@ -28,20 +28,20 @@ def ingest_batch(
     subfolder: str | None = None,
     overrides: dict | None = None,
 ) -> list[Path]:
-    """Ingest many sources, reindexing once at the end (§3.7)."""
+    """Ingest many sources; indexes settle once at the end (§3.7)."""
     paths: list[Path] = []
     for src in sources:
         try:
             paths.append(ingest_file(src, family=family, subfolder=subfolder, overrides=overrides))
         except NotImplementedError:
             continue  # unsupported format — skip, keep the batch going
-    _reindex_once()
+    _settle_once()
     return paths
 
 
-def _reindex_once() -> None:
-    from nexus.vault.index import regenerate_all
-    from nexus.vault.search import reindex
+def _settle_once() -> None:
+    # Per-file ingest already settles; this is belt-and-braces for the batched-classify
+    # future where per-file settling goes away. No-op when clean.
+    from nexus.vault.index import regenerate_if_dirty
 
-    reindex()
-    regenerate_all()
+    regenerate_if_dirty()

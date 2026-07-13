@@ -130,10 +130,21 @@ def write_note(note: CoreNote, path: Path, body: str = "") -> Path:
 
     NOTE: callers go through `nexus/writes.py`, never this directly, so every machine
     write also routes through the trust-aware write surface.
+
+    Every successful write marks BOTH indexes dirty (search corpus + INDEX.md files):
+    because the gate is the only path to disk, no write path — loop, sync, stream,
+    workflow, MCP tool — can forget. Rebuilds happen lazily (search: on next query;
+    INDEX.md: at the next batch boundary via index.regenerate_if_dirty), so a burst of
+    writes coalesces into one rebuild.
     """
     # Round-trip through the adapter to enforce the discriminated union + extra="forbid".
     _ADAPTER.validate_python(note.model_dump(mode="json"))
     path.parent.mkdir(parents=True, exist_ok=True)
     content = f"---\n{_serialize_frontmatter(note)}\n---\n\n{body}".rstrip() + "\n"
     path.write_text(content, encoding="utf-8")
+
+    from nexus.vault import index, search  # local import — io must stay dependency-light
+
+    search.mark_dirty()
+    index.mark_dirty()
     return path

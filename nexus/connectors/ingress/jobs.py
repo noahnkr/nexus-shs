@@ -37,6 +37,11 @@ async def run_job(job: str) -> Response:
     """Execute a cron job by name: deterministic function or scheduled-agent wake."""
     if job in DETERMINISTIC_JOBS:
         await DETERMINISTIC_JOBS[job]()
+        # A sync may have written entities/events without waking an agent — settle the
+        # INDEX.md files at this batch boundary (no-op when nothing was written).
+        from nexus.vault.index import regenerate_if_dirty
+
+        regenerate_if_dirty()
         return JSONResponse({"status": "ran", "job": job, "type": "deterministic"})
 
     if job in AGENT_JOBS:

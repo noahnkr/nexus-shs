@@ -102,6 +102,12 @@ async def _process(raw_frame: str | bytes) -> None:
         log.exception("goto_connect: event-log append failed")
     if stimulus.kind in DISPATCH_KINDS:
         await dispatch(stimulus, tier)
+    else:
+        # Log-only kinds (answered calls) still wrote the event note; settle INDEX.md
+        # here since no agent loop follows to do it (dispatched kinds settle in run_loop).
+        from nexus.vault.index import regenerate_if_dirty
+
+        regenerate_if_dirty()
 
 
 async def run_stream() -> None:

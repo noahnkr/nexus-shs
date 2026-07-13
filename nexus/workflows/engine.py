@@ -80,7 +80,14 @@ async def start_run(
         updated_at=utcnow(),
     )
     store.save_run(run)  # visible as `running` before any step executes
-    await _execute(spec, run)
+    try:
+        await _execute(spec, run)
+    finally:
+        # Action blocks write through the gate (append_log/update_entity/create_task);
+        # settle INDEX.md at run end — no agent loop wraps a workflow run.
+        from nexus.vault.index import regenerate_if_dirty
+
+        regenerate_if_dirty()
     return run
 
 
