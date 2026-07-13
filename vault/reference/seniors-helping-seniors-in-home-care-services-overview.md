@@ -1,5 +1,5 @@
 ---
-title: Seniors Helping Seniors® In-Home Care Services Overview
+title: Seniors Helping Seniors In-Home Care Services Overview
 family: reference
 status: draft
 summary: Senior-to-senior in-home care model matching elderly caregivers with seniors

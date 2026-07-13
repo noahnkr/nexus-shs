@@ -1,5 +1,5 @@
 ---
-title: Seniors Helping Seniors® In-Home Care Services FAQ
+title: Seniors Helping Seniors In-Home Care Services FAQ
 family: reference
 status: draft
 summary: Comprehensive FAQ covering Seniors Helping Seniors® mission, in-home care

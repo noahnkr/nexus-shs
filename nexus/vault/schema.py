@@ -23,11 +23,12 @@ templates, validator, and tool hints all follow automatically.
 
 from __future__ import annotations
 
+import re
 from datetime import date
 from enum import StrEnum
 from typing import Annotated, Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 # A wikilink target, e.g. "[[Other Note]]" — kept as a plain string for now.
 WikiLink = str
@@ -96,12 +97,51 @@ class Audience(StrEnum):
     client_facing = "client_facing"  # safe to share directly with prospects/families
 
 
+# Title normalization for reference notes: trademark glyphs vanish, curly quotes and long
+# dashes become their ASCII forms, a subtitle colon becomes " - ", whitespace collapses.
+_TM_GLYPHS = dict.fromkeys(map(ord, "®™©"))
+_PUNCT_MAP = (
+    {ord(c): "'" for c in "‘’"}
+    | {ord(c): '"' for c in "“”"}
+    | {ord(c): "-" for c in "–—"}
+)
+
+
+def _kebab(tag: str) -> str:
+    """One canonical tag form: lowercase kebab-case, symbols dropped."""
+    tag = re.sub(r"[^\w\s-]", "", tag.lower())
+    return re.sub(r"[\s_-]+", "-", tag).strip("-")
+
+
 class ReferenceNote(CoreNote):
-    """Authored, slow-changing knowledge: SOPs, policy, pricing, voice (§3.1)."""
+    """Authored, slow-changing knowledge: SOPs, policy, pricing, voice (§3.1).
+
+    Titles and tags are normalized at validation time — so the gate guarantees one
+    canonical form no matter which writer (ingest LLM, MCP tool, hand-rolled script)
+    produced them: tags are lowercase kebab-case ("senior-care", never "senior care");
+    titles lose trademark glyphs (®™©) and curly punctuation, and subtitle colons become
+    " - " so the same brand name can't appear in three spellings.
+    """
 
     family: Literal[Family.reference] = Family.reference
     category: ReferenceCategory | None = None
     audience: Audience = Audience.internal
+
+    @field_validator("title")
+    @classmethod
+    def _normalize_title(cls, v: str) -> str:
+        v = v.translate(_TM_GLYPHS).translate(_PUNCT_MAP)
+        v = re.sub(r"\s*:\s*", " - ", v)
+        return re.sub(r"\s+", " ", v).strip(" -") or "Untitled"
+
+    @field_validator("tags")
+    @classmethod
+    def _normalize_tags(cls, v: list[str]) -> list[str]:
+        seen: dict[str, None] = {}
+        for tag in v:
+            if k := _kebab(tag):
+                seen.setdefault(k)
+        return list(seen)
 
 
 class EntityNote(CoreNote):

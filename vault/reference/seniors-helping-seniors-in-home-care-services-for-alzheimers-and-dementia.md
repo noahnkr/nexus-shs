@@ -1,5 +1,5 @@
 ---
-title: 'Seniors Helping Seniors: In-Home Care Services for Alzheimer''s and Dementia'
+title: Seniors Helping Seniors - In-Home Care Services for Alzheimer's and Dementia
 family: reference
 status: draft
 summary: Overview of Seniors Helping Seniors' in-home care services, including definitions
@@ -8,11 +8,11 @@ summary: Overview of Seniors Helping Seniors' in-home care services, including d
 tags:
 - alzheimers
 - dementia
-- in-home care
-- senior care
-- caregiver support
-- memory loss
-- daily living assistance
+- in-home-care
+- senior-care
+- caregiver-support
+- memory-loss
+- daily-living-assistance
 created: '2025-01-01'
 updated: '2026-07-06'
 source_ref: file:reference:SHS_Aging_Parents_Brochure.pdf
