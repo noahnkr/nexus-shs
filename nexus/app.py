@@ -10,6 +10,7 @@ Run: `uvicorn nexus.app:app`
 
 from __future__ import annotations
 
+from contextlib import asynccontextmanager
 from urllib.parse import urlsplit
 
 from starlette.applications import Starlette
@@ -69,6 +70,30 @@ def build_app() -> Starlette:
     except Exception:  # noqa: BLE001 — MCP is optional for the bare HTTP skeleton
         pass
 
+    # GoTo Connect push arrives over a persistent WebSocket (its Call Events API refuses
+    # webhook channels; deliveries are unsigned), so the consumer runs as a lifespan task
+    # in the same vault-owning process — see connectors/goto_connect/stream.py. Resilient:
+    # run_stream() no-ops without OAuth config, and a crash in it never takes the app down.
+    inner_lifespan = lifespan
+
+    @asynccontextmanager
+    async def lifespan_with_goto_stream(app_: Starlette):
+        import asyncio
+        from contextlib import AsyncExitStack, suppress
+
+        from nexus.connectors.goto_connect.stream import run_stream
+
+        task = asyncio.create_task(run_stream())
+        try:
+            async with AsyncExitStack() as stack:
+                if inner_lifespan is not None:
+                    await stack.enter_async_context(inner_lifespan(app_))
+                yield
+        finally:
+            task.cancel()
+            with suppress(asyncio.CancelledError):
+                await task
+
     # Pure-ASGI middleware, outermost first (§9). Starlette builds the stack so there is
     # no self-referential wrapping (which would recurse infinitely). The /mcp bearer guard
     # lives inside the FastMCP app (StaticTokenVerifier, see tools.build_mcp), not here.
@@ -76,7 +101,7 @@ def build_app() -> Starlette:
         Middleware(LoggingMiddleware),
         Middleware(BodyCapMiddleware),
     ]
-    return Starlette(routes=routes, middleware=middleware, lifespan=lifespan)
+    return Starlette(routes=routes, middleware=middleware, lifespan=lifespan_with_goto_stream)
 
 
 app = build_app()

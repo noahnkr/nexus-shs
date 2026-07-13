@@ -34,6 +34,12 @@ class Settings(BaseSettings):
     # --- per-source connector secrets (one per connectors/<source>/) ---
     example_webhook_secret: str | None = None
     welcomehome_api_key: str | None = None  # Exports API token (docs/connectors/welcomehome.md)
+    # GoTo Connect OAuth2 client (docs/connectors/goto-connect.md); tokens live in
+    # vault/system/goto_connect/oauth.json, bootstrapped by scripts/goto_oauth.py.
+    goto_connect_client_id: str | None = None
+    goto_connect_client_secret: str | None = None
+    # Only for an (unsigned) webhook-channel backstop; production push is the WS stream.
+    goto_connect_webhook_secret: str | None = None
 
     # --- owner notifications (§4.4) ---
     owner_contact: str | None = None

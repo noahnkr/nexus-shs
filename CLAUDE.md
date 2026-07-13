@@ -117,6 +117,7 @@ The agent-loop test is `skipif` without `ANTHROPIC_API_KEY`; everything else run
 | `nexus/connectors/ingress/jobs.py` | `DETERMINISTIC_JOBS` vs `AGENT_JOBS` cron split |
 | `nexus/connectors/example/` | ⚙ sample connector: `webhook.py` · `client.py` · `sync.py` |
 | `nexus/connectors/welcomehome/` | WelcomeHome CRM pull-only poll-sync (`client.py` + `sync.py`, no webhook) — see `docs/connectors/welcomehome.md` |
+| `nexus/connectors/goto_connect/` | GoTo Connect phone system: WebSocket push consumer (`stream.py`, lifespan task), frame→Stimulus mapping (`events.py`), read-only OAuth client + loop/MCP tools (`client.py`), missed-call gap-fill (`sync.py`) — see `docs/connectors/goto-connect.md` |
 | `nexus/ingest/` | `extract` → `classify` (schema-constrained) → `pipeline`/`batch` |
 | `nexus/agents/loop.py` | the six-stage engine; `Consequence`; prompt-cache prefix; reindex-once-after |
 | `nexus/agents/context.py` | `load_context()` — injects `vault/context/*.md` (SOUL/USER) |

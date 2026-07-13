@@ -52,7 +52,18 @@
 - `GOTO_CONNECT_CLIENT_ID` / `GOTO_CONNECT_CLIENT_SECRET` (OAuth2 — confirm grant type from
   docs) and/or `GOTO_CONNECT_WEBHOOK_SECRET` if webhooks are body-signed.
 
-## Implementation steps (for the next agent)
+## Status: IMPLEMENTED (2026-07-13)
+
+`nexus/connectors/goto_connect/` is built and tested against the live shapes below:
+`stream.py` (persistent WebSocket consumer, started from the app lifespan; channel state
+in `vault/system/goto_connect/state.json`), `events.py` (frame→Stimulus; missed call =
+UchEvent without answerTime), `client.py` (read-only OAuth client + `goto_lookup_history`
+/ `goto_get_voicemail` tools, wired into `agents/toolset.py` and the `tools()` MCP seam),
+`sync.py` (missed-call gap-fill, `goto-connect-sync` in DETERMINISTIC_JOBS). Answered
+calls are logged but never dispatched. Voicemail transcription returns NOT_FOUND on this
+account — likely needs enabling in GoTo admin; the tool degrades gracefully.
+
+## Original implementation steps (superseded — kept for context)
 1. Brennen to obtain developer/API access to GoTo Connect (developer.goto.com) and confirm:
    OAuth2 grant type + scopes needed for call/SMS events, webhook signature scheme, and the
    event catalog.
@@ -72,12 +83,81 @@
    sandbox/test line and verify it lands in the event log and, when the number matches a
    known prospect/family contact, produces a `log_flag` or `supervised` task as expected.
 
+## Confirmed via live API recon (2026-07-13, scripts/goto_oauth.py)
+
+OAuth client is created and authorized (principal `brennen@shsgreaternaperville.com`,
+broad read + notifications-manage scopes granted). Tokens live at
+`vault/system/goto_connect/oauth.json`; access token ~1h, refresh token long-lived.
+Auth host: `https://authentication.logmeininc.com/oauth` (Basic auth on /token).
+Raw payload dumps: `docs/connectors/goto-samples/` (gitignored — real customer data).
+
+- **accountKey** `6327799820468129299` — from `GET /identity/v1/Users/me` →
+  `urn:scim:schemas:extension:getgo:1.0` → `accounts[0].value`. Required by most APIs.
+- **Webhooks are unsigned.** `POST /notification-channel/v1/channels/{nickname}` registers
+  a webhook (or WebSocket) channel; deliveries are plain JSON POSTs — no HMAC/signature
+  header. Verification must be a secret token embedded in the callback URL
+  (`GOTO_CONNECT_WEBHOOK_SECRET`), constant-time compared at ingress.
+- **Call Events API requires WebSocket channels** (`/call-events/v1/subscriptions` rejects
+  webhook channels). For push-to-webhook, use **Call History notifications**
+  (`call-history.v1.notifications.manage`) and/or poll `GET /call-history/v1/calls
+  ?accountKey=&startTime=&endTime=` — confirmed working; items carry `legId`,
+  `caller/callee {name, number}`, `direction`, `startTime`, `answerTime` (absent ⇒ never
+  answered ⇒ missed), `duration` (ms), `hangupCause` (Q.850), `ownerPhoneNumber`.
+- **SMS**: `GET /messaging/v1/conversations?ownerPhoneNumber=` — inbox access is
+  per-number per-principal (Brennen's token sees `+16303602784`; other DIDs 403).
+  Message schema: `id`, `timestamp`, `direction` (`IN`/`OUT`), `body`,
+  `authorPhoneNumber`, `contactPhoneNumbers`, `media`, `labels`. Event subscriptions
+  exist for `INBOUND_MESSAGE` etc. (`messaging.v1.notifications.manage`).
+- **Voicemail has no list endpoint** (`GET /voicemail/v1/voicemails` → 405; every scoped
+  variant 404). It is notification-driven: subscribe with
+  `voicemail.v1.notifications.manage`, receive a `voicemailId`, then
+  `GET /voicemail/v1/voicemails/{id}` (+ media/transcription) — item endpoint confirmed.
+- Account DIDs (voice-admin): `+16303602005` (main, routes to ext), `+16303602780`,
+  `+16303602784` (Brennen), `+16303602788`. Lines: `GET /users/v1/lines?accountKey=`.
+
+## Live event shapes (confirmed 2026-07-13 via WebSocket recon, scripts/goto_ws_recon.py)
+
+Every frame is `{event: "Notification", eventId, timestamp, data: {source, type, content}}`;
+discriminate on `(data.source, data.type)`. Raw captures: `goto-samples/events/`.
+
+- `("call-history", "UchEvent")` — fires ONCE at call end. `content` = the same row shape
+  as the REST list: caller/callee `{name, number}`, `startTime`, `answerTime`, `duration`
+  (ms), `hangupCause`, `ownerPhoneNumber`, `legId`, `accountKey`, `userKey`.
+  **Missed call = no `answerTime` (duration 0)** — voicemail pickup does NOT set it.
+  This is the primary trigger; call-events state tracking is unnecessary.
+- `("messaging", "message")` — `content` is the message object (`id`, `direction: IN`,
+  `authorPhoneNumber`, `ownerPhoneNumber`, `body`, `media`, `accountKey`). Subscriptions
+  succeeded for ALL account DIDs including ones whose inbox REST reads 403 — push
+  coverage is not gated by inbox sharing.
+- `("VOICEMAIL", "NEW_VOICEMAIL")` — `content` has `voicemailId` (feed to
+  `GET /voicemail/v1/voicemails/{id}` — confirmed 200 — and
+  `.../transcription`), `voicemailboxId`, `extensionNumber`, `callerName`/`callerNumber`,
+  `calledNumber`, `durationMs`, and `legId` that links back to the missed-call UchEvent.
+- `("call-events", "call-state")` — STARTING/ACTIVE/ENDING with participant statuses
+  (`RINGING`/`CONNECTED`/`IN_INTERACTIVE_VOICE_RESPONSE`) + recordings/transcripts
+  metadata (`transcriptEnabled: true` on this account). Optional enrichment only.
+- `("notification-websocket", "WEBSOCKET_REFRESH_REQUIRED")` — housekeeping ~every 10
+  min; plain reconnect to the same channel URL preserves subscriptions.
+- CAUTION: UchEvent `caller`/`callee`/`direction` are leg-relative and unintuitive
+  (extension appears as `callee` with `direction: OUTBOUND` on an inbound external call).
+  Identify the external party as "the side whose number isn't a short extension", don't
+  trust `direction`.
+- Subscription shapes: call-events `{channelId, accountKeys:[{id, events:[STARTING,
+  ACTIVE,ENDING]}]}`; call-history `{channelId, accountKey}`; voicemail `{channelId,
+  voicemailboxId, events:["NEW_VOICEMAIL"]}` (one per box —
+  `GET /voicemail/v1/voicemailboxes?accountKey=` lists them); messaging v1 `{channelId,
+  ownerPhoneNumber, eventTypes:["INCOMING_MESSAGE"]}` (one per DID).
+
 ## Open questions / unknowns
-- Exact GoTo Connect API product and endpoints for call/SMS webhooks (confirm at
-  developer.goto.com once Brennen has API access).
-- Webhook signature scheme and header name.
+- Production delivery: call-events rejects webhook channels; call-history / messaging /
+  voicemail webhook-channel compatibility is untested. Either verify those accept a
+  webhook channel, or run one persistent WebSocket consumer task in-process that feeds
+  the same `Stimulus` path (leaning WS: one mechanism for all four, no public URL).
+- Voicemail transcription endpoint (`/transcription`) returned `status: NOT_FOUND`
+  immediately after deposit — confirm whether it populates after processing lag or needs
+  enabling in GoTo admin.
+- Whether reading the main line's (+16303602005) message history via REST needs that
+  inbox shared with Brennen's user (events already arrive regardless).
 - How to match an inbound phone number to an existing `prospect` (exact match on `phone` or
   a `family_contacts[].phone`, and what to do on no match — likely just log, no entity
   update).
-- Whether GoTo Connect's plan tier includes the developer API / webhooks, or requires an
-  upgrade.

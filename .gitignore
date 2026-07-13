@@ -17,3 +17,6 @@ vault/tasks/*.md
 vault/entity/*.md
 vault/system/
 !vault/**/.gitkeep
+
+# GoTo API probe dumps — contain real customer phone numbers/messages (scripts/goto_oauth.py)
+docs/connectors/goto-samples/

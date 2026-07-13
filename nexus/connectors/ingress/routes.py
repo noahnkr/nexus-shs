@@ -23,6 +23,7 @@ from starlette.routing import Route
 
 from nexus.config import settings
 from nexus.connectors.example import webhook as example_webhook
+from nexus.connectors.goto_connect import webhook as goto_connect_webhook
 from nexus.connectors.ingress import security
 from nexus.connectors.ingress.router import dispatch
 from nexus.connectors.ingress.rules import classify
@@ -30,6 +31,9 @@ from nexus.connectors.ingress.rules import classify
 # FORK: register each push connector's webhook module here, keyed by its NAME.
 CONNECTORS: dict[str, ModuleType] = {
     example_webhook.NAME: example_webhook,
+    # goto_connect's production push is the WebSocket stream (stream.py); this entry
+    # feeds the MCP tools seam and keeps a webhook-channel backstop addressable.
+    goto_connect_webhook.NAME: goto_connect_webhook,
 }
 
 

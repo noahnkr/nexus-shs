@@ -18,12 +18,15 @@ from datetime import UTC
 
 from starlette.responses import JSONResponse, Response
 
+from nexus.connectors.goto_connect.sync import run_sync as goto_connect_sync
 from nexus.connectors.welcomehome.sync import run_sync as welcomehome_sync
 
 # Deterministic jobs: name -> plain async function (no LLM).
 DETERMINISTIC_JOBS: dict[str, Callable[[], Awaitable[None]]] = {
     # WelcomeHome Prospect poll-sync — run every 5-10 min ("respond within the hour").
     "welcomehome-sync": welcomehome_sync,
+    # GoTo Connect missed-call gap-fill behind the WS stream — every 15-30 min is plenty.
+    "goto-connect-sync": goto_connect_sync,
 }
 
 # Agent jobs: the set of job names that wake the scheduled agent (intent == name).

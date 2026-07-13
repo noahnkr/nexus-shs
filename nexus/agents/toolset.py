@@ -18,6 +18,7 @@ from __future__ import annotations
 from collections.abc import Callable
 from typing import Any
 
+from nexus.connectors.goto_connect.client import goto_get_voicemail, goto_lookup_history
 from nexus.vault import queries
 from nexus.writes import append_log, append_memory, create_task, update_entity
 
@@ -32,7 +33,9 @@ def read_tools() -> dict[str, Callable[..., Any]]:
         "list_reference": queries.list_reference,
         "search_logs": queries.search_logs,
         "list_open_tasks": queries.list_open_tasks,
-        # FORK: "example_search_records": ExampleClient(...).search_records, etc.
+        # GoTo Connect reads (docs/connectors/goto-connect.md) — read-only, never a send.
+        "goto_lookup_history": goto_lookup_history,
+        "goto_get_voicemail": goto_get_voicemail,
     }
 
 
@@ -149,6 +152,25 @@ _SPECS: dict[str, tuple[str, dict]] = {
     "append_memory": (
         "Record a durable cross-cutting fact worth remembering (vault-only, autonomous).",
         {"type": "object", "properties": {"fact": {"type": "string"}}, "required": ["fact"]},
+    ),
+    "goto_lookup_history": (
+        "Recent call + SMS history with a phone number from the GoTo Connect phone "
+        "system. Use when a stimulus carries a phone number, to see prior contact before "
+        "matching it to a prospect (get_entity) and drafting an informed reply.",
+        {
+            "type": "object",
+            "properties": {"phone": {"type": "string"}, "days": {"type": "integer", "default": 14}},
+            "required": ["phone"],
+        },
+    ),
+    "goto_get_voicemail": (
+        "Fetch one GoTo voicemail's metadata and transcription (when available) by the "
+        "voicemail_id from a voicemail_received stimulus. Read-only.",
+        {
+            "type": "object",
+            "properties": {"voicemail_id": {"type": "string"}},
+            "required": ["voicemail_id"],
+        },
     ),
 }
 

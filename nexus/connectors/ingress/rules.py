@@ -31,6 +31,8 @@ RULES: dict[tuple[str, str], str] = {
     # GoTo Connect (docs/connectors/goto-connect.md)
     ("goto_connect", "missed_call"): LOG_FLAG,  # vault-only log + flag, no outbound action
     ("goto_connect", "sms_received"): SUPERVISED,  # any reply is external-facing -> draft
+    ("goto_connect", "voicemail_received"): SUPERVISED,  # a callback/reply needs approval
+    ("goto_connect", "call_ended"): AUTONOMOUS,  # answered call: logged only, never dispatched
 }
 
 
