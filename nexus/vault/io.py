@@ -1,4 +1,4 @@
-"""Frontmatter parse + the write gate (spec §3.2 / §3.5).
+"""Frontmatter parse + the write gate.
 
 `write_note` is THE GATE: the only path to disk for machine writes. Every write is
 validated against the schema (so `extra="forbid"` rejects typos loudly) and frontmatter
@@ -27,12 +27,12 @@ _ADAPTER: TypeAdapter = TypeAdapter(AnyNote)
 INDEX_FILENAME = "INDEX.md"
 
 # Top-level folders that hold NON-note material and must stay out of the corpus:
-#   system/   — archived attachments (§3.6) and per-connector sync state
+#   system/   — archived attachments and per-connector sync state
 #   context/  — always-on agent context (SOUL/USER), injected verbatim, never retrieved
 # Excluded from search, retrieval, and INDEX.md generation.
 NON_NOTE_DIRS: frozenset[str] = frozenset({"system", "context"})
 
-# Family -> top-level folder (spec §8: organized by family at the top level).
+# Family -> top-level folder.
 _FAMILY_DIR: dict[Family, str] = {
     Family.reference: "reference",
     Family.entity: "entity",
@@ -80,7 +80,7 @@ def resolve_note_path(path: str | Path) -> Path | None:
 
 
 def parse_note(path: Path) -> CoreNote:
-    """Load a note, re-validating its frontmatter against the schema (§3.2 #3)."""
+    """Load a note, re-validating its frontmatter against the schema."""
     note, _ = read_note(path)
     return note
 
@@ -115,7 +115,7 @@ def iter_notes(root: Path | None = None) -> Iterator[tuple[Path, CoreNote, str]]
 
 
 def _serialize_frontmatter(note: CoreNote) -> str:
-    """Emit YAML frontmatter in model-declaration order (§3.2: order == key order).
+    """Emit YAML frontmatter in model-declaration order.
 
     model_dump(mode="json") yields YAML-safe primitives (enums -> values, dates ->
     strings) and preserves declaration order; we drop None/empty for clean notes.

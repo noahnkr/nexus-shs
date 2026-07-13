@@ -1,4 +1,4 @@
-"""Outbound READ client + OAuth2 token store for GoTo Connect (spec §4.2).
+"""Outbound READ client + OAuth2 token store for GoTo Connect.
 
 Auth: OAuth2 authorization-code with a long-lived refresh token, bootstrapped ONCE by
 `scripts/goto_oauth.py authorize`. Tokens persist at
@@ -6,7 +6,7 @@ Auth: OAuth2 authorization-code with a long-lived refresh token, bootstrapped ON
 io.NON_NOTE_DIRS). Access tokens last ~1h; this module refreshes on expiry and once more
 on a 401.
 
-READ-ONLY by design (§4.2 / §6.3): GoTo Connect can send SMS, place calls, and forward
+READ-ONLY by design: GoTo Connect can send SMS, place calls, and forward
 voicemails — those endpoints are deliberately NOT wrapped here. External-facing actions
 become `create_task` drafts; the trust boundary is the absence of the capability.
 

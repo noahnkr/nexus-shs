@@ -1,8 +1,8 @@
-"""Text extraction (spec §3.7, stage 1 of ingest).
+"""Text extraction.
 
 Turn a raw source into text the classifier can read. Lossless originals: file-based ingest
 archives the binary original (the pipeline does this); text-only ingest treats the note
-body as authoritative and archives nothing (§3.6).
+body as authoritative and archives nothing.
 
 Text formats are handled here with no extra dependencies. Binary formats dispatch to a
 per-suffix extractor (all in-process, pure-Python — no external service): `.pdf` via
@@ -34,7 +34,7 @@ def extract_text(source: Path) -> str:
     if suffix == ".docx":
         return _extract_docx(source)
     raise NotImplementedError(
-        f"§3.7 — no extractor registered for '{suffix}'. Add one here for binary formats; "
+        f"no extractor registered for '{suffix}'. Add one here for binary formats; "
         "text formats are handled natively."
     )
 
@@ -53,7 +53,7 @@ def _extract_pdf(source: Path) -> str:
     text = (pdf_extract_text(str(source)) or "").replace("�", "").strip()
     if not text:
         raise ValueError(
-            f"§3.7 — '{source.name}' yielded no extractable text (likely a scanned/image "
+            f"'{source.name}' yielded no extractable text (likely a scanned/image "
             "PDF). OCR is not wired in; extract text upstream or add an OCR extractor."
         )
     return _repair_exploded_text(text)

@@ -12,7 +12,7 @@ code in sync.
 
 ---
 
-## First decision: do you even need to build one? (§4.5 escape hatch)
+## First decision: do you even need to build one?
 
 Before planning a custom connector, check for something you can borrow:
 
@@ -23,7 +23,7 @@ Before planning a custom connector, check for something you can borrow:
 2. **Do you need server-side, signed, real-time ingestion, or programmatic reads a native
    tool can't give?** → Build a custom connector. Continue below.
 
-## Second decision: push or pull? (§4.3)
+## Second decision: push or pull?
 
 | If the source… | Shape | You implement |
 |---|---|---|
@@ -33,7 +33,7 @@ Before planning a custom connector, check for something you can borrow:
 
 Either way, if the agent needs to pull live detail on demand, add a typed **read** client
 (`client.py`) and wrap its read methods as agent tools. **Never** wrap write/send methods —
-outbound mutations are external-facing and go through the approval queue (§4.2).
+outbound mutations are external-facing and go through the approval queue.
 
 ## Third decision: auth
 

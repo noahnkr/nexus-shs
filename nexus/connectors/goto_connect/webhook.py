@@ -1,4 +1,4 @@
-"""Inbound contract for goto_connect (spec §4.1) — registry entry + MCP tools seam.
+"""Inbound contract for goto_connect — registry entry + MCP tools seam.
 
 Production delivery is the WebSocket consumer (stream.py), NOT this route: GoTo's webhook
 deliveries are unsigned and its Call Events API refuses webhook channels. This module
@@ -8,7 +8,7 @@ still registers the connector in CONNECTORS so that
   (b) a webhook notification channel CAN be pointed at /webhooks/goto_connect as a
       backstop later. GoTo cannot HMAC-sign bodies, so such a channel would only be
       viable if ingress grows token-in-URL verification; until then no secret is
-      configured and the shared route refuses with 503 — never trust blindly (§5.3).
+      configured and the shared route refuses with 503 — never trust blindly.
 """
 
 from __future__ import annotations

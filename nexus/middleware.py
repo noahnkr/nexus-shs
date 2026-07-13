@@ -1,4 +1,4 @@
-"""Pure-ASGI middleware (spec §9).
+"""Pure-ASGI middleware.
 
 Deliberately NOT Starlette's `BaseHTTPMiddleware`: pure-ASGI lets the webhook routes read
 the raw request body twice (once for HMAC verification, once for parsing) and avoids the

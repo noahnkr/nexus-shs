@@ -1,4 +1,4 @@
-"""Generated indexes (spec §3.3).
+"""Generated indexes.
 
 Each folder carries an auto-generated INDEX.md (uppercase: sorts to top, signals
 "generated meta"). STALE INDEXES ARE WORSE THAN NONE, so they are ALWAYS regenerated from
@@ -98,7 +98,7 @@ def render_calendar(folder: Path, *, is_tasks: bool = False) -> str:
 
 
 def regenerate(folder: Path) -> Path:
-    """Pick the render shape by folder type and (over)write its INDEX.md (§3.3).
+    """Pick the render shape by folder type and (over)write its INDEX.md.
 
     Always rebuilds from frontmatter — never reads the previous INDEX.md.
     """
@@ -146,7 +146,7 @@ def regenerate_if_dirty() -> list[Path]:
 
     THE batch boundary primitive: cheap no-op when clean, so every path that *might*
     have written (agent loop end, cron job end, stream event, workflow run end, MCP
-    write tool) calls it unconditionally. Stale indexes are worse than none (§3.3);
+    write tool) calls it unconditionally. Stale indexes are worse than none;
     scattered per-write regeneration is worse than one per batch.
     """
     return regenerate_all() if _dirty else []

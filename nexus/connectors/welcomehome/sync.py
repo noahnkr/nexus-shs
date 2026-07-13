@@ -1,4 +1,4 @@
-"""Deterministic poll-sync for WelcomeHome (spec §4.3). NO LLM in this path.
+"""Deterministic poll-sync for WelcomeHome. NO LLM in this path.
 
 Every run: read the high-water mark -> pull changed Prospect rows via the export API ->
 upsert `prospect` entities keyed by `source_ref="welcomehome:prospect:<id>"` -> advance
@@ -355,7 +355,7 @@ async def _flag_stale(state: dict[str, Any]) -> None:
 
 
 async def _emit(kind: str, payload: dict[str, Any]) -> None:
-    """Manufacture a Stimulus through the same path a webhook takes (§5.2 discipline):
+    """Manufacture a Stimulus through the same path a webhook takes:
     classify -> LOG ALWAYS -> dispatch."""
     from nexus.connectors.ingress.envelope import Stimulus
     from nexus.connectors.ingress.router import dispatch

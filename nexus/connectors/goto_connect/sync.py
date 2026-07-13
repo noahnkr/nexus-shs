@@ -1,10 +1,10 @@
-"""Deterministic gap-fill poll for GoTo Connect calls (spec §4.3). NO LLM in this path.
+"""Deterministic gap-fill poll for GoTo Connect calls. NO LLM in this path.
 
 The WebSocket stream can drop frames across restarts/outages; GoTo does not redeliver.
 Every run pulls call history since the high-water mark and re-manufactures `missed_call`
 stimuli through the same classify -> LOG ALWAYS -> dispatch path. The in-memory SeenCache
 keeps stream-handled events from double-firing within its TTL; after a process restart a
-re-polled event may log twice — acceptable, log-always never LOSES one (§5.2).
+re-polled event may log twice — acceptable, log-always never LOSES one.
 
 Answered calls are not re-emitted here: they carry no action, and the stream already
 logged the ones it saw. SMS/voicemail cannot be gap-filled (no list endpoints with the

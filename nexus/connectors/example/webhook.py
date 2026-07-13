@@ -1,4 +1,4 @@
-"""Inbound contract for `example` (spec §4.1).
+"""Inbound contract for `example`.
 
 The entire surface of a push connector: NAME, SIGNATURE_HEADER, secret(), parse(), and an
 optional signed_timestamp(). The shared ingress route handles HMAC verification, the
@@ -28,7 +28,7 @@ def secret(cfg) -> str | None:
 
 
 def parse(payload: dict, headers, raw: bytes) -> Stimulus:
-    """Map THIS vendor's wire format onto the universal envelope (§4.1)."""
+    """Map THIS vendor's wire format onto the universal envelope."""
     return Stimulus(
         source=NAME,
         kind=_KIND_MAP.get(payload.get("type", ""), "unknown"),

@@ -1,4 +1,4 @@
-"""The HTTP front door (spec §5.2) — /webhooks/{source} and /cron/{job}.
+"""The HTTP front door — /webhooks/{source} and /cron/{job}.
 
 The inline path must be FAST and LOSSLESS (webhook senders time out in ~3s). The handler
 does only fast, must-not-lose work and returns; all real work runs after the ACK:
@@ -7,9 +7,9 @@ does only fast, must-not-lose work and returns; all real work runs after the ACK
     LOG ALWAYS (durable append to events/) -> schedule dispatch (background) -> 200
 
 LOG ALWAYS happens inline, before acting, regardless of tier — so even if the agent later
-crashes, the event is on disk (§5.2).
+crashes, the event is on disk.
 
-CONNECTORS is the per-source registry (FORK SEAM, §7 step 3): add one row per connector.
+CONNECTORS is the per-source registry: add one row per push connector.
 """
 
 from __future__ import annotations
@@ -28,7 +28,7 @@ from nexus.connectors.ingress import security
 from nexus.connectors.ingress.router import dispatch
 from nexus.connectors.ingress.rules import classify
 
-# FORK: register each push connector's webhook module here, keyed by its NAME.
+# Register each push connector's webhook module here, keyed by its NAME.
 CONNECTORS: dict[str, ModuleType] = {
     example_webhook.NAME: example_webhook,
     # goto_connect's production push is the WebSocket stream (stream.py); this entry
@@ -45,7 +45,7 @@ async def webhook(request: Request) -> Response:
 
     raw = await request.body()
 
-    # 1) verify — no secret configured => refuse (503), never trust blindly (§5.3).
+    # 1) verify — no secret configured => refuse (503), never trust blindly.
     secret = conn.secret(settings)
     if not secret:
         return JSONResponse({"error": "no secret configured"}, status_code=503)
@@ -79,7 +79,7 @@ async def webhook(request: Request) -> Response:
 
 
 async def cron(request: Request) -> Response:
-    """/cron/{job} — bearer-protected trigger for deterministic or agent jobs (§5.6)."""
+    """/cron/{job} — bearer-protected trigger for deterministic or agent jobs."""
     if request.headers.get("authorization") != f"Bearer {settings.cron_token}":
         return JSONResponse({"error": "unauthorized"}, status_code=401)
 
@@ -99,7 +99,7 @@ async def _json(raw: bytes) -> dict:
 
 
 def _log_always(stimulus, tier: str) -> None:
-    """Durable, inline append to the event log (§5.2). Best-effort, must not raise out."""
+    """Durable, inline append to the event log. Best-effort, must not raise out."""
     from nexus.writes import append_log
 
     try:

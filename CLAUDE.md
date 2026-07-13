@@ -1,28 +1,12 @@
 # CLAUDE.md — engineering reference for Nexus
 
-Guidance for a coding agent (and humans) working in this repo. Nexus is a **domain-neutral
-foundation** meant to be cloned and extended per business. Your job in a fork is to fill
-the marked seams and leave the core intact. Read this before changing code.
+Guidance for a coding agent (and humans) working in this repo. This is the Nexus system
+of intelligence configured for **Seniors Helping Seniors Greater Naperville** (in-home
+senior care; owner Brennen Roberts): the domain seams are filled — schema, risk tiers,
+WelcomeHome + GoTo Connect connectors — and the core engine stays intact. Read this
+before changing code.
 
 Companion docs: [`README.md`](README.md) (orientation), [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md) (hosting).
-
-> **`§N` in code docstrings** refers to the original framework spec's sections. That spec
-> has been consolidated into this file and the README; the mapping is: §1 invariants →
-> *Invariants*; §2 stack → *What this system is*; §3 vault → `vault/` + `vault/README.md`;
-> §4 connectors, §5 ingress, §6 agents → *Repo map* + *Mechanisms*; §7 forking → *Fork
-> checklist*; §8 locked decisions → *Conventions* + *Invariants*. The numbers are kept as
-> stable anchors; you don't need the old file.
-
-## Configuring a fork: start with the interview
-
-If this is a **fresh fork** and the owner is present, the intended entry point is the
-onboarding interview at [`.claude/commands/onboard.md`](.claude/commands/onboard.md) (run
-`/onboard`). It elicits the business and turns it into config: the context files
-(`vault/context/SOUL.md`·`USER.md`·`ORG.md`), the entity + reference **schema**
-(`vault/schema.py`), the risk tiers (`ingress/rules.py`), a **plan per connector**
-(`docs/connectors/<source>.md`, using [`docs/connectors/README.md`](docs/connectors/README.md)),
-tailored docs, and a seeding checklist (`docs/SEEDING.md`). The interview *plans* connectors
-— it does not implement client/sync code. When you edit `vault/schema.py`, re-run `pytest`.
 
 ---
 
@@ -70,7 +54,7 @@ changing these is a design smell.
 ```bash
 uv sync                       # or: pip install -e ".[dev]"
 uvicorn nexus.app:app --reload
-pytest -q                     # acceptance suite (mirrors the build-order exit criteria)
+pytest -q                     # acceptance suite
 ruff check nexus tests        # lint (must stay clean)
 ruff check --fix nexus tests  # autofix
 ```
@@ -137,7 +121,7 @@ The agent-loop test is `skipif` without `ANTHROPIC_API_KEY`; everything else run
 | `nexus/workflows/engine.py` | run execution; per-step persistence; multi-instance runs; `cancel_run` |
 | `nexus/workflows/triggers.py` | active-workflow trigger matching, fired from `dispatch` |
 
-⚙ = a **fork seam** you're expected to edit.
+⚙ = a **domain seam** — the file to edit when extending the schema, rules, or connectors.
 
 See [`docs/WORKFLOWS.md`](docs/WORKFLOWS.md) for the workflows layer (conversational
 Zapier-shaped automation: build in prose, preview as Mermaid, manage statuses and runs).
@@ -174,21 +158,21 @@ Zapier-shaped automation: build in prose, preview as Mermaid, manage statuses an
 - **Obsidian graph.** `[[wikilinks]]` in `related` (and typed relation fields you add)
   render as graph edges and are traversable by the agent.
 
-## Fork checklist
+## Adding a connector
 
-Prefer the **onboarding interview** (`/onboard`, see above) — it walks the owner through the
-steps and writes the seams for you. Manual reference:
-[README → Forking](README.md#forking-nexus-for-your-business) has the ordered 8 steps.
-The three primary seams: `vault/schema.py`, `connectors/ingress/rules.py`,
-`connectors/<source>/`. Registering a new connector = add its `webhook` module to
+Plan it first as `docs/connectors/<source>.md` (template:
+[`docs/connectors/README.md`](docs/connectors/README.md)); `welcomehome.md` and
+`goto-connect.md` are worked examples. Registering = add its `webhook` module to
 `ingress.routes.CONNECTORS`, its reads to `agents/toolset.py` + `tools/vault.py` (or a
-connector-specific `tools()` seam picked up by `tools/connectors.py`), and (if it polls)
-its sync to `jobs.DETERMINISTIC_JOBS`. When you touch the schema, re-run `pytest`.
+connector-specific `tools()` seam picked up by `tools/connectors.py`), its risk rows to
+`ingress/rules.py`, and (if it polls) its sync to `jobs.DETERMINISTIC_JOBS`. When you
+touch the schema, re-run `pytest`.
 
-## Remaining stubs (fill in a fork)
+## Remaining stubs (still unimplemented)
 
-`connectors/example/client.py` (outbound HTTP), `connectors/example/sync.py` (poll-sync),
-OCR for scanned PDFs in `ingest/extract.py` (text/HTML/PDF/DOCX handled), the `notify`
-transport in `agents/notify.py` (logs by default), and the Batches-API path in `ingest/batch.py`
-(a drop-in optimization over the working per-file loop). Each carries a
-`NotImplementedError("§…")` pointing at its contract.
+`connectors/example/client.py` (outbound HTTP) and `connectors/example/sync.py`
+(poll-sync) — the copyable template connector; OCR for scanned PDFs in
+`ingest/extract.py` (text/HTML/PDF/DOCX handled); the `notify` transport in
+`agents/notify.py` (logs by default — owner notifications don't leave the box yet); and
+the Batches-API path in `ingest/batch.py` (a drop-in optimization over the working
+per-file loop). Each raises `NotImplementedError` describing its contract.

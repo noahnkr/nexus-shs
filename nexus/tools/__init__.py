@@ -1,4 +1,4 @@
-"""MCP wrappers — register_all aggregator (spec §3.5 / §7 step 4, the MCP seam).
+"""MCP wrappers — register_all aggregator.
 
 Exposes the SAME plain functions (vault.queries reads + writes) as MCP tools, so the
 conversational agent in a desktop client and the server-side loop share one source of
@@ -12,7 +12,7 @@ The surface is split by usage into sibling modules, each exposing `register(targ
   - `workflows`      — MCP-only workflow build & manage tools
   - `connectors`     — ⚙ per-connector `tools()` seam (fork seam)
 
-CRITICAL: register read + vault-write tools only. No external-send tool (§4.2).
+CRITICAL: register read + vault-write tools only. No external-send tool.
 """
 
 from __future__ import annotations
@@ -35,7 +35,7 @@ def register_all(target: Any) -> None:
     """
     if not hasattr(target, "tool"):
         raise NotImplementedError(
-            "§3.5 — register_all expects a FastMCP server (a .tool decorator). Pass the "
+            "register_all expects a FastMCP server (a .tool decorator). Pass the "
             "instance from build_mcp()."
         )
 
@@ -49,7 +49,7 @@ def build_mcp(name: str = "nexus"):
     """Construct a FastMCP server with all vault tools registered.
 
     The /mcp control plane is bearer-guarded with FastMCP's native StaticTokenVerifier
-    (spec §5.3) — the privileged surface exposing read + vault-write tools. A request must
+    — the privileged surface exposing read + vault-write tools. A request must
     present `Authorization: Bearer <MCP_TOKEN>`; FastMCP rejects the rest with a
     spec-compliant 401 + resource-metadata. Only when the token is unset (dev) does /mcp
     run open, and we log that loudly.

@@ -1,12 +1,12 @@
 """The run engine — executes one RunState through a workflow's step graph.
 
-Discipline inherited from ingress (§5.2 "log always" in spirit): run state is persisted
+Discipline inherited from ingress: run state is persisted
 BEFORE the first step and after EVERY step, so a crash mid-run leaves a visible `running`
 record at the exact step it died on, never silence. Multi-instance by construction: each
 `start_run` mints a fresh run_id and file; concurrent runs of one workflow never share
 state.
 
-Steps route on block kind AS DATA (§1.1): condition -> branch on truthiness; action ->
+Steps route on block kind AS DATA: condition -> branch on truthiness; action ->
 execute and follow on_success/on_failure. `{{...}}` refs in step config resolve against
 the run context (trigger payload + prior step outputs) just before execution.
 """

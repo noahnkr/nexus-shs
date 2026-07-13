@@ -1,7 +1,7 @@
-"""Ingest — how raw sources become notes (spec §3.7).
+"""Ingest — how raw sources become notes.
 
 The on-ramp that fills the vault. An empty vault makes dumb agents, so seeding is a
-first-class parallel track (§10). Pipeline:
+first-class parallel track. Pipeline:
 
   extract text -> LLM classify (constrained by the schema's JSON schema) -> assemble
   frontmatter -> write a status:draft note -> archive the original -> reindex.

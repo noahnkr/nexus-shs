@@ -1,12 +1,12 @@
-"""The block registry — the capability catalog workflows compose (⚙ FORK SEAM).
+"""The block registry — the capability catalog workflows compose (⚙ connector seam).
 
 A Block is one trigger/condition/action capability with a name, a description the builder
-LLM routes on (descriptions are load-bearing, §1.5), a config JSON schema, and — for
+LLM routes on (descriptions are load-bearing), a config JSON schema, and — for
 conditions/actions — the plain function that executes it. Core blocks wrap the existing
 vault write surface and the agent loop; connectors contribute their own by exposing a
 module-level `blocks()` function (registered here, mirroring `ingress.routes.CONNECTORS`).
 
-TRUST INVARIANT (§4.2 / §6.3, unchanged): no block contacts an outside party. The registry
+TRUST INVARIANT: no block contacts an outside party. The registry
 structurally REFUSES any block flagged `external_send=True` — an external-facing step can
 only be the `vault.create_task` block, which drafts for owner approval. Connector blocks
 must be READS or draft-producers, exactly like the loop's toolset.
@@ -61,7 +61,7 @@ def register(block: Block) -> None:
     """Add a block. Refuses external-send capability — the trust boundary is structural."""
     if block.external_send:
         raise ValueError(
-            f"block '{block.name}' declares external_send — forbidden (§4.2). "
+            f"block '{block.name}' declares external_send — forbidden. "
             "External-facing steps must compose vault.create_task instead."
         )
     if block.kind != BlockKind.trigger and block.fn is None:
@@ -97,7 +97,7 @@ def catalog() -> list[dict[str, Any]]:
 
 
 def _load_connector_blocks() -> None:
-    """⚙ FORK SEAM: pull blocks from registered connectors.
+    """⚙ connector seam: pull blocks from registered connectors.
 
     A connector opts in by exposing `blocks() -> list[Block]` in its webhook module (or a
     dedicated `blocks` module registered in CONNECTORS). Failures are non-fatal — a broken

@@ -1,8 +1,8 @@
-"""Dispatch — stimulus -> worker (spec §5.5).
+"""Dispatch — stimulus -> worker.
 
 A tiny router maps source -> worker and runs the loop in the BACKGROUND (after the ACK, in
 the same vault-owning process; no broker, one volume). The blocking model call is offloaded
-to a thread so it doesn't stall the event loop (§5.2).
+to a thread so it doesn't stall the event loop.
 """
 
 from __future__ import annotations

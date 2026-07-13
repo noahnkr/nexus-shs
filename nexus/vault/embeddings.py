@@ -1,4 +1,4 @@
-"""Swappable embedding interface (spec §3.4).
+"""Swappable embedding interface.
 
 Semantic search is OPTIONAL and dormant by default: with no embedding key configured,
 `embed()` returns None and the search engine falls back to BM25-only. Turn it on by

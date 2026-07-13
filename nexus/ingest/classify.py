@@ -1,10 +1,10 @@
-"""Schema-constrained classification (spec §3.7, stage 2 of ingest).
+"""Schema-constrained classification.
 
 The LLM emits frontmatter constrained by the schema's JSON schema (`json_schema_for`), so
-it can ONLY produce valid fields and enum values (§3.2 #1) — modeled as a forced tool call
+it can ONLY produce valid fields and enum values — modeled as a forced tool call
 whose input_schema IS the family's JSON schema. If your domain forbids certain data from
 entering the vault (PHI, secrets), encode that as a classifier instruction here AND as a
-schema rule — make the boundary structural (§7 step 1).
+schema rule — make the boundary structural.
 """
 
 from __future__ import annotations
@@ -20,7 +20,8 @@ _SYSTEM = (
     "You classify a source document into a single vault note's frontmatter. Emit ONLY "
     "fields allowed by the provided tool schema. Write a tight one-line `summary`, choose "
     "accurate `tags`, and a descriptive `title`. Do not invent data not present in the "
-    "document. [FORK: add any data-boundary rules — e.g. never copy PHI/secrets verbatim.]"
+    "document. Never copy medical details, SSNs, or financial account numbers verbatim "
+    "into frontmatter — summarize at the level needed to find the note again."
 )
 
 

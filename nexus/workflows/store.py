@@ -1,7 +1,7 @@
 """Validated persistence for workflow definitions and run state.
 
-Documents live under `vault/system/workflows/` — inside the one volume (§8: one process,
-one volume), but under `system/` so they stay out of the note corpus (io.NON_NOTE_DIRS).
+Documents live under `vault/system/workflows/` — inside the one volume, but under
+`system/` so they stay out of the note corpus (io.NON_NOTE_DIRS).
 Mirrors the write-gate discipline: every save round-trips through the Pydantic model
 (`extra="forbid"`), and every load re-validates to catch hand edits.
 

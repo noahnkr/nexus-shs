@@ -1,7 +1,7 @@
 """Natural language -> WorkflowSpec — the conversational build loop.
 
 The owner describes trigger + steps in prose; one schema-constrained Messages call
-compiles it against the block catalog. Same trick as the ingest classifier (§3.2 #1): the
+compiles it against the block catalog. Same trick as the ingest classifier: the
 LLM is forced through a tool whose input schema IS `WorkflowDraft.model_json_schema()`, so
 it can only emit a structurally valid draft; graph/block problems it can still make are
 validated deterministically and fed back for one retry — which is what makes the process

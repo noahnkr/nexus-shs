@@ -1,4 +1,4 @@
-"""INGRESS LAYER — the single front door (spec §5).
+"""INGRESS LAYER — the single front door.
 
 One entry point. Everything arrives as a Stimulus. The layer authenticates, normalizes,
 classifies risk deterministically, logs unconditionally, ACKs fast, and dispatches the

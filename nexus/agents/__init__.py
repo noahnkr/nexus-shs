@@ -1,4 +1,4 @@
-"""AGENTIC LAYER — the cognition (spec §6).
+"""AGENTIC LAYER — the cognition.
 
 Three agents, one loop. The conversational agent is the daily interface; the reactive
 agent wakes on events; the scheduled agent runs on a clock. They differ only in trigger,

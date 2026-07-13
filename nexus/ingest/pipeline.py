@@ -1,4 +1,4 @@
-"""The ingest pipeline (spec §3.7).
+"""The ingest pipeline.
 
 extract text -> LLM classify -> assemble frontmatter -> write status:draft note ->
 archive original (to system/attachments/) -> reindex.
@@ -50,7 +50,7 @@ def ingest_file(
     subfolder: str | None = None,
     overrides: dict[str, Any] | None = None,
 ) -> Path:
-    """Run the full pipeline for one source file; return the draft note path (§3.7).
+    """Run the full pipeline for one source file; return the draft note path.
 
     `subfolder` optionally organizes reference notes into a human-browsable subtree
     (e.g. reference/hr/…). It is purely for curation/Obsidian navigation: retrieval walks
@@ -82,7 +82,7 @@ def ingest_file(
 
 
 def _archive_original(source: Path) -> None:
-    """Keep a lossless copy so the note can always be re-derived (§3.6)."""
+    """Keep a lossless copy so the note can always be re-derived."""
     attachments = io.vault_root() / "system" / "attachments"
     attachments.mkdir(parents=True, exist_ok=True)
     try:

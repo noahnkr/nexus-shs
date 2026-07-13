@@ -1,4 +1,4 @@
-"""Hybrid retrieval, in-process (spec §3.4).
+"""Hybrid retrieval, in-process.
 
 At moderate scale the INDEX.md *is* the retrieval layer (read index, drill into pages).
 This adds a hybrid engine for when prose search matters — all in-process, no new infra:
@@ -13,7 +13,7 @@ This adds a hybrid engine for when prose search matters — all in-process, no n
 
 Semantic is dormant when embed() returns None: search is BM25-only and everything works.
 
-Alternative (§3.4 note): qmd can back these query functions instead — the framework cares
+Alternative: qmd can back these query functions instead — the framework cares
 about the query-function interface, not the engine.
 """
 
@@ -46,7 +46,7 @@ def tokenize(text: str) -> list[str]:
 
 
 def rrf_merge(*ranked_lists: list[str], k: int = RRF_K) -> list[tuple[str, float]]:
-    """Reciprocal rank fusion: merge ranked id-lists by rank, not score (§3.4).
+    """Reciprocal rank fusion: merge ranked id-lists by rank, not score.
 
     score(id) = Σ 1 / (k + rank_in_list). Pure and engine-agnostic.
     """
@@ -58,7 +58,7 @@ def rrf_merge(*ranked_lists: list[str], k: int = RRF_K) -> list[tuple[str, float
 
 
 def project(note, body: str) -> str:
-    """The searchable text for a note: shared fields + family-specific content (§3.4)."""
+    """The searchable text for a note: shared fields + family-specific content."""
     parts: list[str] = [note.title, note.summary or "", " ".join(note.tags), body]
     if isinstance(note, EventNote):
         parts.extend(note.entries)
@@ -123,7 +123,7 @@ class HybridIndex:
         self._vectors: dict[str, list[float]] = {}  # path -> embedding (when semantic on)
 
     def rebuild(self) -> None:
-        """Rebuild the in-memory BM25 index over projected note text (§3.4).
+        """Rebuild the in-memory BM25 index over projected note text.
 
         Walks the vault (iter_notes already excludes INDEX.md). When semantic is enabled,
         embeds notes whose content hash changed and caches the vectors.
@@ -146,7 +146,7 @@ class HybridIndex:
         self._maybe_embed(docs)
 
     def _maybe_embed(self, docs: list[_Doc]) -> None:
-        """Embed changed docs into the dense cache; no-op when embed() is dormant (§3.4)."""
+        """Embed changed docs into the dense cache; no-op when embed() is dormant."""
         if not docs:
             self._vectors = {}
             return
@@ -167,7 +167,7 @@ class HybridIndex:
         self._hashes = wanted
 
     def query(self, q: str, k: int = 10, *, family: Family | None = None) -> list[Hit]:
-        """Hybrid query: BM25 list ⊕ dense list, fused via rrf_merge (§3.4).
+        """Hybrid query: BM25 list ⊕ dense list, fused via rrf_merge.
 
         When the dense cache is empty (embed() dormant), returns the BM25 ranking alone.
         Optionally scoped to a single family (e.g. reference-only, event-only).

@@ -1,4 +1,4 @@
-"""The reactive agent (spec §6.2).
+"""The reactive agent.
 
 Wakes on an inbound webhook (or a manufactured poll-sync delta). LEAN prompt, minimal
 context, CHEAP model tier (it fires often). A thin wrapper over run_loop.
@@ -17,7 +17,12 @@ SYSTEM_PROMPT = """You are the reactive agent for a Nexus system of intelligence
 You wake on a single inbound event. Run the six-stage loop. Resolve any named entity FIRST.
 External-facing actions can only be queued as a task for human approval — you cannot send.
 Record only genuine change.
-[FORK: one paragraph describing THIS business and its salient event types.]
+The business: Seniors Helping Seniors Greater Naperville — in-home senior care
+(companion, personal, respite, and specialized care), owned by Brennen Roberts. Salient
+events: new or changed prospects syncing from the WelcomeHome CRM, and missed calls,
+inbound SMS, or voicemails from prospects and family contacts on the GoTo Connect phone
+lines. Leads expect a response within the hour: match phone numbers to the prospect,
+pull their history, and draft a timely reply or callback task for Brennen to approve.
 """
 
 

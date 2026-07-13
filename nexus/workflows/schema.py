@@ -1,6 +1,6 @@
 """The workflow contract — definition (`WorkflowSpec`) and instance (`RunState`).
 
-Mirrors the vault-schema discipline (§3.2): one Pydantic model set is the single source of
+Mirrors the vault-schema discipline: one Pydantic model set is the single source of
 truth. From it we derive (1) the JSON schema constraining the builder's LLM output, (2) the
 runtime validator every persisted document crosses, and (3) the shape the renderer walks.
 `extra="forbid"` everywhere — an LLM is the writer.

@@ -1,4 +1,4 @@
-"""Vault read/write MCP tools (spec §3.5) — the shared plain functions.
+"""Vault read/write MCP tools — the shared plain functions.
 
 Exposes the SAME plain functions as the loop (`vault.queries` reads + `writes`), using the
 same descriptions as the loop's tool specs (`_SPECS`) so chat and the ambient loop agree.

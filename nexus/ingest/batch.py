@@ -1,4 +1,4 @@
-"""Bulk bootstrap via the Batches API (spec §3.7).
+"""Bulk bootstrap via the Batches API.
 
 A cheaper variant of the pipeline for seeding a backlog. The downstream assembly,
 write-gate, and reindex are identical to pipeline.py; only the classification step is
@@ -28,7 +28,7 @@ def ingest_batch(
     subfolder: str | None = None,
     overrides: dict | None = None,
 ) -> list[Path]:
-    """Ingest many sources; indexes settle once at the end (§3.7)."""
+    """Ingest many sources; indexes settle once at the end."""
     paths: list[Path] = []
     for src in sources:
         try:

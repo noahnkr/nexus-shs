@@ -1,11 +1,11 @@
-"""Read-tool logic — plain functions (spec §3.5).
+"""Read-tool logic — plain functions.
 
 There is no central `search_everything`. Each layer has one narrow read tool whose
 behavior (and, where wrapped, whose description) tells the agent when to reach for it; the
 routing EMERGES from the model reading precise tool descriptions against the request.
 
 These plain functions back BOTH the MCP tools (conversational agent) AND the server-side
-agent loop — one source of truth, no self-MCP hop (§3.5).
+agent loop — one source of truth, no self-MCP hop.
 
 Used in stage 3 (gather). All read-only: they never write.
 """
@@ -93,7 +93,7 @@ def get_entity(name: str) -> dict[str, Any] | None:
 
     Exact title or source_ref match wins (case-insensitive); otherwise falls back to
     phone/email matching across the entity and its family contacts, so a webhook that only
-    carries a caller's number still resolves. Identity resolves FIRST in stage 3 (§6.1).
+    carries a caller's number still resolves. Identity resolves FIRST in stage 3.
     """
     needle = name.strip().lower()
     notes = list(io.iter_notes(io.family_dir(Family.entity)))

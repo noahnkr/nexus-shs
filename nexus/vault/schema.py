@@ -1,4 +1,4 @@
-"""The schema is the contract (spec §3.2) — THE PRIMARY FORK SEAM.
+"""The schema is the contract beneath everything.
 
 One Pydantic model set defines every note family. From it (and nothing hand-maintained
 alongside it) you generate three things:
@@ -16,7 +16,7 @@ Two load-bearing rules:
   - Field DECLARATION ORDER == frontmatter key order; core fields are declared first, so
     every note reads consistently with zero formatting code.
 
-FORKING (spec §7 step 1): change the enums and entity models below — `Kind`, the lifecycle
+Extending: change the enums and entity models below — `Kind`, the lifecycle
 `Status`, your reference taxonomy, and the per-kind entity models. The JSON schema,
 templates, validator, and tool hints all follow automatically.
 """
@@ -114,7 +114,7 @@ def _kebab(tag: str) -> str:
 
 
 class ReferenceNote(CoreNote):
-    """Authored, slow-changing knowledge: SOPs, policy, pricing, voice (§3.1).
+    """Authored, slow-changing knowledge: SOPs, policy, pricing, voice.
 
     Titles and tags are normalized at validation time — so the gate guarantees one
     canonical form no matter which writer (ingest LLM, MCP tool, hand-rolled script)
@@ -145,11 +145,11 @@ class ReferenceNote(CoreNote):
 
 
 class EntityNote(CoreNote):
-    """Current distilled state of one tracked thing (§3.1). Nested union on `kind`."""
+    """Current distilled state of one tracked thing. Nested union on `kind`."""
 
     family: Literal[Family.entity] = Family.entity
     kind: Kind  # <-- YOUR entity kinds live here
-    # FORK: add filterable frontmatter fields (stage, owner, area, dates, ...).
+    # Add filterable frontmatter fields here as needs emerge (stage, owner, dates, ...).
 
 
 class ServiceLine(StrEnum):
@@ -197,18 +197,18 @@ class ProspectNote(EntityNote):
 
 
 class EventNote(CoreNote):
-    """Append-only history — one note per day (§3.1). Entity state is its projection."""
+    """Append-only history — one note per day. Entity state is its projection."""
 
     family: Literal[Family.event] = Family.event
     entries: list[str] = []  # chronological event-entry summaries for the day
 
 
 class TaskNote(CoreNote):
-    """A pending human decision — the approval inbox (§3.1)."""
+    """A pending human decision — the approval inbox."""
 
     family: Literal[Family.task] = Family.task
     action: str | None = None  # what is proposed
-    # Structured hand-off so approval is one-click (§6.3): external-facing tasks carry
+    # Structured hand-off so approval is one-click: external-facing tasks carry
     # the channel, recipient, and drafted body.
     channel: str | None = None
     recipient: str | None = None
@@ -238,12 +238,12 @@ def model_for(family: Family) -> type[CoreNote]:
 
 
 def json_schema_for(family: Family) -> dict:
-    """JSON schema constraining LLM structured output for this family (§3.2 #1)."""
+    """JSON schema constraining LLM structured output for this family."""
     return model_for(family).model_json_schema()
 
 
 def template_for(family: Family) -> str:
-    """A documented, empty frontmatter template for this family (§3.2 #2)."""
+    """A documented, empty frontmatter template for this family."""
     model = model_for(family)
     lines = ["---"]
     for name, info in model.model_fields.items():

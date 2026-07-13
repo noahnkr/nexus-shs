@@ -1,7 +1,7 @@
 """Connector `welcomehome` — WelcomeHome CRM (docs/connectors/welcomehome.md).
 
 Pull-only: WelcomeHome has no webhooks, so this connector is a deterministic poll-sync
-(§4.3) over the live, paginated bulk CSV export API. It reconciles Prospect rows into
+ over the live, paginated bulk CSV export API. It reconciles Prospect rows into
 `prospect` entity notes and manufactures new_prospect / stage_changed / prospect_stale
 deltas back through the ordinary classify -> dispatch path.
 

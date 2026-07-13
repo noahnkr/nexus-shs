@@ -1,4 +1,4 @@
-"""KNOWLEDGE LAYER — the vault (spec §3).
+"""KNOWLEDGE LAYER — the vault.
 
 A directory of markdown notes with YAML frontmatter, split into REFERENCE (authored) and
 STATE (entity / event / task). The schema is the contract; the write gate is the only

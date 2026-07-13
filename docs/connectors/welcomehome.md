@@ -40,7 +40,7 @@
   (`sync._STAGE_TO_STATUS`). `GET /api/lead_sources` likewise maps `lead_source_id` ->
   referral source name.
 - Read endpoints the agent needs: none beyond the export for now — the poll-sync reconciles
-  bulk state into `prospect` entities directly (§4.3 pattern); no live on-demand read tool
+  bulk state into `prospect` entities directly; no live on-demand read tool
   is needed at this stage since the export already gives current Prospect state.
 
 ## Risk tier (rules.py)

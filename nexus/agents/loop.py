@@ -1,4 +1,4 @@
-"""The six-stage loop (spec §6.1) — the cognitive engine shared by all three agents.
+"""The six-stage loop — the cognitive engine shared by all three agents.
 
 A standard Messages-API tool-use loop, but the PRESCRIBED parts are owned explicitly in
 the system prompt and tool design, not left to the model's discretion:
@@ -15,11 +15,11 @@ the system prompt and tool design, not left to the model's discretion:
               needs a human -> create_task; durable fact -> append_memory; nothing -> write
               nothing. Reads never write.
 
-Implementation notes carried into a fork (§6.1):
+Implementation notes carried into a fork:
   - the system prompt + tool specs are a large, byte-stable prefix -> PROMPT-CACHE it;
   - REINDEX ONCE after the loop, since writes during the loop changed the corpus.
 
-The trust gate is STRUCTURAL (§6.3): external-facing actions cannot send — the loop's
+The trust gate is STRUCTURAL: external-facing actions cannot send — the loop's
 toolset contains no send tool, so external-facing can only produce a create_task draft.
 """
 
@@ -37,7 +37,7 @@ from nexus.connectors.ingress.envelope import Stimulus
 MAX_TURNS = 12
 
 # The domain-neutral preamble (the prescribed loop). Forks append a business paragraph via
-# the agent system_prompt; this part never changes (§7 "what you do not touch").
+# the agent system_prompt; this part never changes.
 _LOOP_PREAMBLE = """\
 You run a fixed six-stage loop: receive, plan, gather, decide, deliver, record.
 - Resolve any named person/org with get_entity BEFORE other lookups (entity-first).
@@ -81,7 +81,7 @@ async def run_loop(
 ) -> dict:
     """Run the six-stage tool-use loop for one stimulus; return a result summary.
 
-    `tier` is authoritative context from ingress (§5.4) — the model never decides its own
+    `tier` is authoritative context from ingress — the model never decides its own
     trust level. The toolset (agents.toolset) deliberately excludes any external-send tool,
     so the trust boundary holds structurally regardless of what the model decides.
     """
@@ -93,7 +93,7 @@ async def run_loop(
     tools = anthropic_tool_specs()
     funcs = all_tools()
 
-    # Byte-stable prefix -> prompt-cache it (§6.1). cache_control on the final system block.
+    # Byte-stable prefix -> prompt-cache it. cache_control on the final system block.
     # Order: agent role prompt -> fixed loop rules -> always-on context (SOUL/USER).
     system_text = system_prompt + "\n\n" + _LOOP_PREAMBLE
     always_on = load_context()
@@ -145,8 +145,8 @@ async def run_loop(
             )
         messages.append({"role": "user", "content": tool_results})
 
-    # Writes during the loop dirtied the indexes via the gate; settle them once here
-    # (§6.1). Search rebuilds lazily on its next query; INDEX.md regenerates now.
+    # Writes during the loop dirtied the indexes via the gate; settle them once here.
+    # Search rebuilds lazily on its next query; INDEX.md regenerates now.
     from nexus.vault.index import regenerate_if_dirty
 
     regenerate_if_dirty()

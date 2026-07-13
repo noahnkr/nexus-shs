@@ -1,4 +1,4 @@
-"""Owner notification (spec §4.4).
+"""Owner notification.
 
 Outbound notification to the OWNER (not an external party) is owner-only, therefore
 autonomous. Keep the transport swappable (SMS, email, push) behind this one function; the
@@ -24,5 +24,6 @@ def notify(message: str, owner: str | None = None) -> None:
 
 
 def _send(owner: str, message: str) -> None:
-    """The swappable transport. FORK: replace with SMS/email/push (e.g. Twilio, SES)."""
+    """The swappable transport — STILL A STUB: logs only. Replace with SMS/email/push
+    (e.g. Twilio, SES) when owner notifications should leave the box."""
     logger.info("notify(%s): %s", owner, message)

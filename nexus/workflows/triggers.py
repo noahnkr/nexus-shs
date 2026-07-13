@@ -2,14 +2,14 @@
 
 Wired into `ingress.router.dispatch`: after the normal agent worker is chosen, every
 ACTIVE workflow whose trigger matches the stimulus fires a new run instance. Matching is
-data-driven off the trigger block + config (no if-ladders over transports, §1.1):
+data-driven off the trigger block + config (no if-ladders over transports):
 
   trigger.webhook  matches source (and kind, if pinned) of any non-cron stimulus
   trigger.cron     matches source == "cron" and kind == config.job
   trigger.manual   never matches ambient stimuli — only run_workflow fires it
 
 The tier passed to each run is the AUTHORITATIVE tier from ingress classify — a workflow
-never decides its own trust level (§5.4).
+never decides its own trust level.
 """
 
 from __future__ import annotations

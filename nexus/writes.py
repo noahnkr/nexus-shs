@@ -1,14 +1,14 @@
-"""The write surface (spec §3.5 / §6 stage 6).
+"""The write surface.
 
 Used ONLY in stage 6 (record). Every write crosses the validating gate
 (`nexus.vault.io.write_note`). These plain functions back both the MCP tools and the
 server-side loop.
 
-The decisive property (§3.5): there is deliberately NO write tool that contacts an outside
+The decisive property: there is deliberately NO write tool that contacts an outside
 party. An external action can only become a `create_task` draft. The trust boundary is not
 a prompt instruction the model might forget — it is the ABSENCE of a capability.
 
-The stage-6 change-test (§1.6 / §6.1): log always; write only genuine change.
+The stage-6 change-test: log always; write only genuine change.
   - real event occurred        -> append_log        (vault-only, autonomous)
   - tracked thing's state moved -> update_entity     (vault-only, autonomous)
   - needs a human decision      -> create_task       (the supervised mechanism)
@@ -80,7 +80,7 @@ def create_task(
     """Something needs a human -> write to the approval queue. THE supervised mechanism.
 
     For an external-facing action this is the ONLY available output: the structured
-    hand-off (channel + recipient + drafted body) makes approval one-click (§6.3).
+    hand-off (channel + recipient + drafted body) makes approval one-click.
     """
     now = datetime.now(UTC)
     today = now.date()
@@ -102,7 +102,7 @@ def create_task(
 def set_note_status(path: str, status: str) -> Path:
     """Move a knowledge-base note through its lifecycle: draft -> published -> archived.
 
-    This is the explicit review decision the ingest contract promises (§3.7): ingest lands
+    This is the explicit review decision the ingest contract promises: ingest lands
     `status: draft`; a HUMAN promotes to `published` (or retires to `archived`) after
     reading it. Reference family only — tasks and entities have their own lifecycles
     (`create_task` / `update_entity`). Exposed on the MCP surface (the owner's chat), NOT

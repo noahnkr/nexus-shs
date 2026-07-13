@@ -1,14 +1,14 @@
-"""The cron jobs registry (spec §5.5 / §7 step 6).
+"""The cron jobs registry.
 
 A cron tick is one of two kinds — this split is the discipline that keeps the model doing
-judgment and plain code doing plumbing (§1.8):
+judgment and plain code doing plumbing:
 
-  - Deterministic job — a plain function, NO LLM (e.g. the poll-sync of §4.3). Cheap,
+  - Deterministic job — a plain function, NO LLM (e.g. a connector poll-sync). Cheap,
     auditable. May MANUFACTURE stimuli that re-enter classify -> dispatch.
   - Agent job — wake the scheduled agent; the job NAME is its intent (daily-digest,
     weekly-summary, vault-health).
 
-FORK: choose which deterministic syncs and which agent jobs run, and when.
+Register deterministic syncs in DETERMINISTIC_JOBS and agent jobs in AGENT_JOBS.
 """
 
 from __future__ import annotations

@@ -1,9 +1,9 @@
-"""Thin entrypoint (spec §10.1).
+"""Thin entrypoint.
 
 Wires FastMCP + Starlette into one ASGI app bound to one volume:
-  - register_all() exposes the vault read/write functions as MCP tools (§3.5).
-  - the ingress routes own every non-MCP HTTP entry (§5).
-  - /health is the boot smoke test (build-order step 1 exit criterion).
+  - register_all() exposes the vault read/write functions as MCP tools.
+  - the ingress routes own every non-MCP HTTP entry.
+  - /health is the boot smoke test.
 
 Run: `uvicorn nexus.app:app`
 """
@@ -43,7 +43,7 @@ def build_app() -> Starlette:
     lifespan = None
 
     # MCP tool surface at /mcp — the SAME plain functions back chat and the server-side
-    # loop (§3.5). The FastMCP app owns the path *inside itself* (http_app(path="/mcp"))
+    # loop. The FastMCP app owns the path *inside itself* (http_app(path="/mcp"))
     # and is mounted at "/" as the catch-all, so `/mcp` is served at the exact path with
     # no trailing-slash mount and no 307 — the redirect a Mount("/mcp") would emit is
     # what MCP clients behind Railway's edge choke on. Its lifespan is threaded into the
@@ -94,7 +94,7 @@ def build_app() -> Starlette:
             with suppress(asyncio.CancelledError):
                 await task
 
-    # Pure-ASGI middleware, outermost first (§9). Starlette builds the stack so there is
+    # Pure-ASGI middleware, outermost first. Starlette builds the stack so there is
     # no self-referential wrapping (which would recurse infinitely). The /mcp bearer guard
     # lives inside the FastMCP app (StaticTokenVerifier, see tools.build_mcp), not here.
     middleware = [

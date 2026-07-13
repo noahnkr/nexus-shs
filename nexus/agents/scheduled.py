@@ -1,4 +1,4 @@
-"""The scheduled agent (spec §6.2).
+"""The scheduled agent.
 
 Wakes on a cron tick whose job NAME is its intent (daily-digest, weekly-summary,
 vault-health). Job-name-driven prompt, MID model tier. A thin wrapper over run_loop.
@@ -21,7 +21,16 @@ queued for approval. Record only genuine change.
 
 
 def _prompt_for(job: str) -> str:
-    return f"{_BASE_PROMPT}\nJob (intent): {job}\n[FORK: describe what this job should produce.]"
+    deliverables = {
+        "daily-digest": "Yesterday's events, prospect pipeline movement, and open tasks "
+        "awaiting Brennen's approval — short enough to read over coffee.",
+        "weekly-summary": "The week's pipeline: new inquiries, stage changes, stalled "
+        "prospects, and anything that went quiet.",
+        "vault-health": "Stale entities, draft reference notes awaiting review, and "
+        "notes past their last_reviewed window.",
+    }
+    detail = deliverables.get(job, "Produce what the job name implies, concisely.")
+    return f"{_BASE_PROMPT}\nJob (intent): {job}\n{detail}"
 
 
 async def handle(stimulus: Stimulus, tier: str) -> None:

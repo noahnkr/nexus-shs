@@ -1,4 +1,4 @@
-"""Per-connector MCP tools (⚙ FORK SEAM).
+"""Per-connector MCP tools (⚙ connector seam).
 
 Mirrors the `workflows.blocks` connector seam: a connector opts into the MCP surface by
 exposing `tools(target) -> None` in its webhook module (or a dedicated module registered in

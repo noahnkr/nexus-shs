@@ -1,7 +1,7 @@
-"""Append-only event log (spec §3.1).
+"""Append-only event log.
 
 The permanent, undeletable audit trail. One note per day under `events/`. Entity state is
-a *projection* of this log (event sourcing). "Log always" (§1.6): every stimulus is
+a *projection* of this log (event sourcing). "Log always": every stimulus is
 appended regardless of outcome; this module is the mechanism.
 
 Note: the trust-aware entry point is `nexus.writes.append_log`; this holds the raw

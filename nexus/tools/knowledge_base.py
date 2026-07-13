@@ -1,4 +1,4 @@
-"""Knowledge-base curation MCP tools (MCP-only, spec §3.7) — the OWNER's surface.
+"""Knowledge-base curation MCP tools (MCP-only) — the OWNER's surface.
 
 Deliberately NOT in the loop's toolset: ingest takes server-local file paths (ambient
 stimuli never carry those), and publication is the human review step the ingest contract

@@ -1,4 +1,4 @@
-"""Acceptance tests mirroring the spec's §10 exit criteria.
+"""Acceptance tests for the core invariants.
 
 These assert STRUCTURE, the implemented primitives, and end-to-end behavior of the
 Knowledge and Ingress layers (no API key required). The agent loop test runs only when
@@ -27,7 +27,7 @@ def vault(tmp_path, monkeypatch):
     return tmp_path
 
 
-# --- §10.1 host: imports clean, app builds, /health ---------------------------------
+# --- host: imports clean, app builds, /health ---------------------------------
 
 
 def test_app_imports_and_health_route_present():
@@ -96,7 +96,7 @@ def test_mcp_allows_public_host_header(monkeypatch):
     assert resp.status_code != 421, f"Host {domain!r} rejected by DNS-rebinding guard"
 
 
-# --- §3.2 schema: discriminated union + extra="forbid" -------------------------------
+# --- schema: discriminated union + extra="forbid" -------------------------------
 
 
 def test_schema_validates_and_forbids_extras():
@@ -111,7 +111,7 @@ def test_schema_validates_and_forbids_extras():
     )
     assert note.family == "reference"
 
-    with pytest.raises(ValidationError):  # extra="forbid" guards LLM typos (§3.2)
+    with pytest.raises(ValidationError):  # extra="forbid" guards LLM typos
         adapter.validate_python(
             {"title": "X", "family": "reference", "created": date.today().isoformat(),
              "updated": date.today().isoformat(), "nonexistent_field": "oops"}
@@ -125,7 +125,7 @@ def test_json_schema_generates_for_every_family():
         assert json_schema_for(fam)["type"] == "object"
 
 
-# --- §5.1 / §5.4 ingress envelope + deterministic classification --------------------
+# --- ingress envelope + deterministic classification --------------------
 
 
 def test_stimulus_envelope():
@@ -139,10 +139,10 @@ def test_classify_known_and_unknown_failsafe():
     from nexus.connectors.ingress.rules import AUTONOMOUS, SUPERVISED, classify
 
     assert classify("cron", "daily-digest") == AUTONOMOUS
-    assert classify("totally", "unknown") == SUPERVISED  # fail safe (§5.4)
+    assert classify("totally", "unknown") == SUPERVISED  # fail safe
 
 
-# --- §5.3 constant-time HMAC + replay window + idempotency ---------------------------
+# --- constant-time HMAC + replay window + idempotency ---------------------------
 
 
 def test_hmac_verify_roundtrip():
@@ -169,7 +169,7 @@ def test_replay_window_and_idempotency():
     assert cache.seen("example:1") is True
 
 
-# --- §4.1 sample connector parse() --------------------------------------------------
+# --- sample connector parse() --------------------------------------------------
 
 
 def test_example_connector_parse_maps_kind():
@@ -179,7 +179,7 @@ def test_example_connector_parse_maps_kind():
     assert s.source == "example" and s.kind == "new_record" and s.external_id == "7"
 
 
-# --- §3.5 / §6.3 structural trust boundary ------------------------------------------
+# --- structural trust boundary ------------------------------------------
 
 
 def test_loop_toolset_has_no_external_send_tool():
@@ -209,7 +209,7 @@ def test_kb_curation_tools_are_mcp_only():
     assert not {"ingest_file", "ingest_batch", "set_note_status"} & names
 
 
-# --- §3.4 RRF fusion + hybrid (BM25-only) search ------------------------------------
+# --- RRF fusion + hybrid (BM25-only) search ------------------------------------
 
 
 def test_rrf_merge_ranks_by_position():
@@ -235,7 +235,7 @@ def test_hybrid_search_bm25_and_family_scope():
     assert all(h.family == "event" for h in idx.query("contract", family=Family.event))
 
 
-# --- §3.5 write surface + §3.1 append-only events -----------------------------------
+# --- write surface + append-only events -----------------------------------
 
 
 def test_writes_and_event_log():
@@ -254,7 +254,7 @@ def test_writes_and_event_log():
     assert io.read_note(tp)[0].status == "open"
 
 
-# --- §10.2 reads: get_entity, list_entities (NO embedder), list_open_tasks ----------
+# --- reads: get_entity, list_entities (NO embedder), list_open_tasks ----------
 
 
 def test_queries_and_metadata_filter_skips_embedder(monkeypatch):
@@ -278,7 +278,7 @@ def test_queries_and_metadata_filter_skips_embedder(monkeypatch):
     assert [t["action"] for t in queries.list_open_tasks()] == ["approve refund"]
 
 
-# --- §3.3 generated indexes ---------------------------------------------------------
+# --- generated indexes ---------------------------------------------------------
 
 
 def test_index_empty_queue_signal_and_leaf_table():
@@ -295,7 +295,7 @@ def test_index_empty_queue_signal_and_leaf_table():
     assert "| Title |" in body and "Acme Corp" in body
 
 
-# --- §3.7 ingest: text extraction + draft assembly (no LLM) -------------------------
+# --- ingest: text extraction + draft assembly (no LLM) -------------------------
 
 
 def test_ingest_extract_and_assemble(tmp_path):
@@ -467,7 +467,7 @@ def test_reference_subfolder_is_walked_and_searchable():
     assert any(h.title == "PTO Policy" for h in get_index().query("paid time off"))
 
 
-# --- §10.4 agent loop (full Messages-API round-trip; needs a key) -------------------
+# --- agent loop (full Messages-API round-trip; needs a key) -------------------
 
 
 @pytest.mark.skipif(not os.getenv("ANTHROPIC_API_KEY"), reason="requires ANTHROPIC_API_KEY")
@@ -479,4 +479,4 @@ def test_agent_loop_read_only_writes_nothing():
                     payload={"text": "what reference do we have about pricing?"})
     result = asyncio.run(run_loop(stim, system_prompt="You are a test agent.",
                                   tier="autonomous", model="claude-haiku-4-5-20251001"))
-    assert result["writes"] == []  # a read-only query records nothing (§6.1 change-test)
+    assert result["writes"] == []  # a read-only query records nothing

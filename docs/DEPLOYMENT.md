@@ -27,7 +27,7 @@ and redeploys.
 Consequence: **your volume is the source of truth in production.** Back it up. Editing the
 seed in the repo only affects *fresh* environments, not existing ones. To pull live
 reference/context changes back for git review, export them from the volume yourself (state
-layers never leave the box automatically — spec §8).
+layers never leave the box automatically).
 
 ## Environment variables
 
@@ -74,7 +74,7 @@ below are already configured on first deploy.
    Settings → Deploy if needed).
 6. **Cron.** Add a **Cron Schedule** (or a second tiny "cron" service) that runs on your
    cadence and calls the app over HTTP — Nexus triggers cron via HTTP, no second process
-   needs the volume (spec §5.6):
+   needs the volume:
    ```bash
    curl -fsS -X POST "$PUBLIC_URL/cron/daily-digest" \
      -H "Authorization: Bearer $CRON_TOKEN"
@@ -185,4 +185,4 @@ Railway's edge (hikari) is strict; three distinct causes all present as 421:
 Search is in-process and the vault rebuilds sub-second at small scale. Run **one replica**
 — multiple replicas would each hold their own in-memory index and race on the volume. Reach
 for a broker, a shared vector store, or horizontal scale only when volume genuinely forces
-it (spec §1.10). Until then, a bigger box beats more boxes.
+it. Until then, a bigger box beats more boxes.

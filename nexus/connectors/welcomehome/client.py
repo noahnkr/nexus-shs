@@ -1,4 +1,4 @@
-"""Outbound READ client for WelcomeHome CRM (spec §4.2).
+"""Outbound READ client for WelcomeHome CRM.
 
 API: https://crm.welcomehomesoftware.com/api-docs/index.html (OpenAPI at
 /api-docs/v1/swagger.yaml). Confirmed from the spec:

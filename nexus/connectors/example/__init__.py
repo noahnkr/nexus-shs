@@ -1,4 +1,4 @@
-"""Sample connector `example` (spec §4) — the FORK SEAM template (§7 step 3).
+"""Sample connector `example` — the copyable template for new push connectors.
 
 Copy this package to `connectors/<your-source>/`, implement the three pieces, and register
 it: add the webhook module to ingress.routes.CONNECTORS, and (if it polls) its sync to

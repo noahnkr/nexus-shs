@@ -1,7 +1,7 @@
-"""Typed settings (spec §8: pydantic-settings, prod fail-fast).
+"""Typed settings.
 
 One `Settings` object is the single source of configuration. In `prod` the validator
-refuses to start if a required secret is missing — never trust blindly (§5.3 in spirit).
+refuses to start if a required secret is missing — never trust blindly.
 """
 
 from __future__ import annotations
@@ -29,7 +29,7 @@ class Settings(BaseSettings):
 
     # --- models ---
     anthropic_api_key: str = ""
-    embedding_api_key: str | None = None  # None => semantic search dormant (§3.4)
+    embedding_api_key: str | None = None  # None => semantic search dormant
 
     # --- per-source connector secrets (one per connectors/<source>/) ---
     example_webhook_secret: str | None = None
@@ -41,7 +41,7 @@ class Settings(BaseSettings):
     # Only for an (unsigned) webhook-channel backstop; production push is the WS stream.
     goto_connect_webhook_secret: str | None = None
 
-    # --- owner notifications (§4.4) ---
+    # --- owner notifications ---
     owner_contact: str | None = None
 
     @property
@@ -50,7 +50,7 @@ class Settings(BaseSettings):
 
     @property
     def semantic_enabled(self) -> bool:
-        """Spec §3.4: semantic is optional and dormant until a key is set."""
+        """Semantic search is optional and stays dormant until a key is set."""
         return bool(self.embedding_api_key)
 
     @model_validator(mode="after")

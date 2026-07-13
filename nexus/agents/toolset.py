@@ -1,4 +1,4 @@
-"""The loop's tool surface (spec §6 / §3.5) — FORK SEAM (§7 step 4).
+"""The loop's tool surface.
 
 Assembles the tools the loop may call. The same plain functions back both these specs and
 the MCP wrappers (tools/__init__.py) — one source of truth, no self-MCP hop.
@@ -6,11 +6,11 @@ the MCP wrappers (tools/__init__.py) — one source of truth, no self-MCP hop.
 READ tools (stage 3, gather): the vault queries + each connector's READ client methods.
 WRITE tools (stage 6, record): the vault write surface.
 
-CRITICAL (§4.2 / §6.3): DO NOT add send/write-external tools. External actions stay
+CRITICAL: DO NOT add send/write-external tools. External actions stay
 external-facing and can only become a create_task draft. The trust boundary is the ABSENCE
 of the capability here.
 
-FORK: when you add a connector, append its READ client methods as tool specs below.
+When adding a connector, append its READ client methods as tool specs below.
 """
 
 from __future__ import annotations
@@ -54,8 +54,8 @@ def all_tools() -> dict[str, Callable[..., Any]]:
 
 
 # Name -> (description, input JSON schema). Descriptions are load-bearing: routing emerges
-# from the model reading them against the request (§1.5). NOTE the absence of any
-# external-send tool — the trust boundary is structural (§4.2 / §6.3).
+# from the model reading them against the request. NOTE the absence of any
+# external-send tool — the trust boundary is structural.
 _SPECS: dict[str, tuple[str, dict]] = {
     "search_reference": (
         "Search stable, authored business facts — pricing, policy, voice, how-to "
@@ -178,7 +178,7 @@ _SPECS: dict[str, tuple[str, dict]] = {
 def anthropic_tool_specs() -> list[dict]:
     """Translate the tool registry into Messages-API tool specs (name/description/schema).
 
-    Descriptions are load-bearing: the routing emerges from the model reading them (§1.5).
+    Descriptions are load-bearing: the routing emerges from the model reading them.
     """
     available = all_tools()
     return [

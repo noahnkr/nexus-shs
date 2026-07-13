@@ -1,11 +1,11 @@
-"""Persistent WebSocket consumer — GoTo's push feed into the ingress path (spec §5.2).
+"""Persistent WebSocket consumer — GoTo's push feed into the ingress path.
 
 Why a WebSocket and not /webhooks/goto_connect: GoTo's Call Events API refuses webhook
 channels outright, and its webhook deliveries are UNSIGNED — a WS channel is authenticated
 by the OAuth token at creation and needs no public endpoint. One mechanism for all four
 event sources.
 
-Frames re-enter the exact discipline a webhook would (§5.2):
+Frames re-enter the exact discipline a webhook would:
     parse (events.to_stimulus) -> dedup -> classify -> LOG ALWAYS -> dispatch
 `call_ended` is logged but never dispatched (events.DISPATCH_KINDS).
 

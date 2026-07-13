@@ -1,11 +1,11 @@
-"""GoTo notification frame -> Stimulus mapping (spec §4.1). Pure functions, no IO.
+"""GoTo notification frame -> Stimulus mapping. Pure functions, no IO.
 
 Every push frame (WebSocket or webhook channel — same envelope) looks like:
 
     {"event": "Notification", "eventId": N, "timestamp": ..., "data":
         {"source": ..., "type": ..., "content": {...}}}
 
-Discrimination is on (data.source, data.type) AS DATA (§1.1) via _MAPPERS. Shapes were
+Discrimination is on (data.source, data.type) AS DATA via _MAPPERS. Shapes were
 confirmed against live captures 2026-07-13 (docs/connectors/goto-connect.md).
 
 CAUTION — UchEvent's caller/callee/direction are leg-relative and unintuitive (an inbound
@@ -22,8 +22,8 @@ from typing import Any
 from nexus.connectors.goto_connect import NAME
 from nexus.connectors.ingress.envelope import Stimulus
 
-# Kinds that wake the reactive agent. Answered calls (`call_ended`) are logged (§1.7
-# "log always") but do not dispatch — no judgment is needed for a completed conversation.
+# Kinds that wake the reactive agent. Answered calls (`call_ended`) are logged but do not
+# dispatch — no judgment is needed for a completed conversation.
 DISPATCH_KINDS = {"missed_call", "sms_received", "voicemail_received"}
 
 

@@ -1,7 +1,7 @@
-"""The universal envelope (spec §5.1).
+"""The universal envelope.
 
 A chat message, a signed webhook, a poll-sync delta, and a cron tick all become this one
-object — so nothing downstream branches on origin (§1.1). Downstream code branches on
+object — so nothing downstream branches on origin. Downstream code branches on
 source/kind AS DATA (lookup tables), never with if-ladders over transports.
 """
 
