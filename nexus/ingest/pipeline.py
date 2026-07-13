@@ -7,7 +7,7 @@ archive original (to system/attachments/) -> reindex.
 from __future__ import annotations
 
 import shutil
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
 from pathlib import Path
 from typing import Any
 
@@ -22,11 +22,25 @@ def assemble(frontmatter: dict[str, Any], *, family: Family, source_ref: str | N
     today = datetime.now(UTC).date().isoformat()
     data = dict(frontmatter)
     data.update(family=family.value, status=Status.draft.value)
-    data.setdefault("created", today)
+    data["created"] = _coerce_date(data.get("created"), fallback=today)
     data["updated"] = today
     if source_ref:
         data["source_ref"] = source_ref
     return model_for(family).model_validate(data)
+
+
+def _coerce_date(value: Any, *, fallback: str) -> str:
+    """A usable ISO date from whatever the classifier emitted, else `fallback` (today).
+
+    Undated documents make the model emit null/""/invalid dates; a missing document date
+    must degrade to ingestion date, never fail the ingest or write a null `created`.
+    """
+    if not value:
+        return fallback
+    try:
+        return date.fromisoformat(str(value)[:10]).isoformat()
+    except ValueError:
+        return fallback
 
 
 def ingest_file(

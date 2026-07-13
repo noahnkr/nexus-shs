@@ -312,6 +312,25 @@ def test_ingest_extract_and_assemble(tmp_path):
     assert note.status == Status.draft and note.source_ref == "file:reference:policy.txt"
 
 
+def test_assemble_created_falls_back_to_today_for_undated_documents():
+    """An undated source (classifier emits null/""/garbage for `created`) must land with
+    the ingestion date — never a validation failure or a null created."""
+    from datetime import UTC, datetime
+
+    from nexus.ingest.pipeline import assemble
+    from nexus.vault.schema import Family
+
+    today = datetime.now(UTC).date()
+    for emitted in (None, "", "not-a-date", 0):
+        note = assemble({"title": "T", "created": emitted}, family=Family.reference,
+                        source_ref=None)
+        assert note.created == today, f"created={emitted!r} must fall back to today"
+    # a real document date (even datetime-shaped) is preserved, not overwritten
+    note = assemble({"title": "T", "created": "2026-01-05T10:00:00Z"},
+                    family=Family.reference, source_ref=None)
+    assert note.created.isoformat() == "2026-01-05"
+
+
 def test_ingest_preserves_extracted_body_for_binary_formats(tmp_path, monkeypatch):
     """Binary/HTML sources must land with the EXTRACTED TEXT as the note body — a
     bodiless note is invisible to search and can never be quoted in an answer."""
