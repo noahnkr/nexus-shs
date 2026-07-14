@@ -123,12 +123,14 @@ async def run_stream() -> None:
     backoff = _BACKOFF_START
     force_new = False
     while True:
+        reused = not force_new and bool(_load_state().get("channel_url"))
         try:
             url = await asyncio.to_thread(_ensure_channel, force_new)
             force_new = False
             async with websockets.connect(url, ping_interval=20) as ws:
                 log.info("goto_connect: stream connected")
                 backoff = _BACKOFF_START
+                reused = False  # a live channel — later failures aren't a stale-URL symptom
                 while True:
                     try:
                         frame = await asyncio.wait_for(ws.recv(), timeout=_RECV_TIMEOUT)
@@ -145,6 +147,13 @@ async def run_stream() -> None:
             log.error("goto_connect: stream auth failure: %s", exc)
             await asyncio.sleep(_BACKOFF_MAX)
         except Exception:  # noqa: BLE001 — connection/HTTP hiccups: back off, then rebuild
+            if reused:
+                # A persisted channel that failed before it ever connected is stale
+                # server-side (e.g. HTTP 404 handshake); rebuild now, don't burn minutes
+                # of backoff retrying a dead URL.
+                log.warning("goto_connect: persisted channel rejected — rebuilding")
+                force_new = True
+                continue
             log.exception("goto_connect: stream error — reconnecting in %.0fs", backoff)
             await asyncio.sleep(backoff)
             if backoff >= _BACKOFF_MAX:

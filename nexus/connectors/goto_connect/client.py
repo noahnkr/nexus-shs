@@ -88,13 +88,12 @@ class TokenStore:
         if not cid or not csec:
             raise GoToAuthError("GOTO_CONNECT_CLIENT_ID / _CLIENT_SECRET not configured")
         basic = base64.b64encode(f"{cid}:{csec}".encode()).decode()
-        resp = httpx.post(
-            f"{AUTH_BASE}/token",
-            data={"grant_type": "refresh_token", "refresh_token": tok["refresh_token"]},
-            headers={"Authorization": f"Basic {basic}"},
-            timeout=30.0,
-            transport=self._transport,
-        )
+        with httpx.Client(timeout=30.0, transport=self._transport) as client:
+            resp = client.post(
+                f"{AUTH_BASE}/token",
+                data={"grant_type": "refresh_token", "refresh_token": tok["refresh_token"]},
+                headers={"Authorization": f"Basic {basic}"},
+            )
         if resp.status_code != 200:
             raise GoToAuthError(f"token refresh failed ({resp.status_code}): {resp.text[:200]}")
         new = resp.json()
